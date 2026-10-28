@@ -180,7 +180,7 @@ export const ShareReportsModal: React.FC<ShareReportsModalProps> = ({
               </div>
               <div>
                 <div className="font-extrabold text-sm text-[#1E3A8A] leading-tight">
-                  {shopProfile.shopName || 'CHANDRA TRADING COMPANY'}
+                  {shopProfile.shopName || 'Retail Store'}
                 </div>
                 <div className="text-[11px] text-[#475569] mt-0.5">
                   GSTIN: <span className="font-mono font-bold text-[#1E3A8A]">{shopProfile.gstin || 'Not Provided'}</span> | State: {shopProfile.state || 'Madhya Pradesh (23)'}

@@ -58,7 +58,7 @@ export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
       {/* 1. Header Details */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '15px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3px', lineHeight: 1.15 }}>
-          {shopProfile.shopName || 'CHANDRA TRADING COMPANY'}
+          {shopProfile.shopName || 'Retail Store'}
         </div>
         {shopProfile.tagline && (
           <div style={{ fontSize: '10px', fontWeight: 700, color: '#333', marginTop: '1px' }}>

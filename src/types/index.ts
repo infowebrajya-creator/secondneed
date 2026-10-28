@@ -156,7 +156,7 @@ export interface ShopProfile {
 }
 
 export type PaperSize = '80mm' | '58mm' | 'A5' | 'A4' | 'Thermal';
-export type PrintEngine = 'auto' | 'usb' | 'browser';
+export type PrintEngine = 'auto' | 'usb' | 'bluetooth' | 'browser';
 
 export interface PrintSettings {
   paperSize: PaperSize;

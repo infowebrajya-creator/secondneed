@@ -36,10 +36,10 @@ export const A5PrintInvoice: React.FC<A5PrintInvoiceProps> = ({ invoice, shopPro
   const grossSubtotal = invoice.subtotal + (invoice.totalDiscount || 0);
 
   const isPartyGiven = invoice.customerName && invoice.customerName.trim().toLowerCase() !== 'cash customer';
-  const partyLine1 = isPartyGiven ? `M/s ${invoice.customerName.trim().toUpperCase()}` : `M/s ${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}`;
+  const partyLine1 = isPartyGiven ? `M/s ${invoice.customerName.trim().toUpperCase()}` : `M/s ${shopProfile.shopName || 'Retail Store'}`;
   const partyLine2 = isPartyGiven
-    ? (invoice.customerAddress ? invoice.customerAddress.trim().toUpperCase() : 'PALARI')
-    : (shopProfile.address || 'NEW SHUKRAWARI MARKET, SEONI (M.P.)');
+    ? (invoice.customerAddress ? invoice.customerAddress.trim().toUpperCase() : '')
+    : (shopProfile.address || '');
 
   return (
     <div
@@ -103,7 +103,7 @@ export const A5PrintInvoice: React.FC<A5PrintInvoiceProps> = ({ invoice, shopPro
           </div>
           {isPartyGiven && (
             <div style={{ fontSize: '7.5px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', marginTop: '1px' }}>
-              M/s {shopProfile.shopName || 'CHANDRA TRADING COMPANY'}
+              M/s {shopProfile.shopName || 'Retail Store'}
             </div>
           )}
         </div>

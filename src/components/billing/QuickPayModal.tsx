@@ -48,8 +48,8 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
   totals,
   customerName = 'Cash Customer',
   customerMobile = '',
-  shopUpiId = 'mjain21@sbi',
-  shopName = 'CHANDRA TRADING COMPANY',
+  shopUpiId = '',
+  shopName = '',
   invoiceType = 'gst',
   notes = '',
   onNotesChange
@@ -58,8 +58,8 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
   const paperFormat = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm' : printSettings?.paperSize === 'A4' ? 'A4' : 'A5';
 
   // Always prefer active shopProfile setting with fallback to prop
-  const activeUpiId = (shopProfile?.upiId || shopUpiId || 'mjain21@sbi').trim();
-  const activeShopName = (shopProfile?.shopName || shopName || 'CHANDRA TRADING COMPANY').trim();
+  const activeUpiId = (shopProfile?.upiId || shopUpiId || '').trim();
+  const activeShopName = (shopProfile?.shopName || shopName || 'WebRajya Store').trim();
 
   const [cashTendered, setCashTendered] = useState<number>(netPayable);
   const [upiRef, setUpiRef] = useState<string>('');
@@ -105,6 +105,10 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
       return;
     }
 
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(25); } catch (_) {}
+    }
+
     // First save the invoice
     await onConfirmPayment(paymentMode === 'cash' ? cashTendered : netPayable, false, upiRef.trim() || undefined);
 
@@ -114,7 +118,7 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
 
     const receiptMessage = [
       `🧾 *TAX INVOICE / RECEIPT*`,
-      `*${shopName.toUpperCase()}*`,
+      `*${activeShopName.toUpperCase()}*`,
       `--------------------------------`,
       `Customer: ${customerName.trim() || 'Valued Customer'}`,
       `Date: ${new Date().toLocaleDateString('en-IN')}`,
@@ -129,6 +133,19 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
       `--------------------------------`,
       `Thank you for your business! 🙏`
     ].filter(Boolean).join('\n');
+
+    // On mobile devices, prefer native Web Share API for 1-tap sheet (WhatsApp, Messages, etc.)
+    if (typeof navigator !== 'undefined' && navigator.share && window.innerWidth < 768) {
+      try {
+        await navigator.share({
+          title: `${activeShopName} Receipt`,
+          text: receiptMessage,
+        });
+        return;
+      } catch (shareErr: any) {
+        if (shareErr.name === 'AbortError') return;
+      }
+    }
 
     const waUrl = targetPhone 
       ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(receiptMessage)}`
@@ -276,22 +293,34 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
             {/* UPI QR Code & Reference */}
             {paymentMode === 'upi' && (
               <div className="p-3.5 bg-[#F5F9FF] border border-[#D8E1EC] rounded-xl space-y-3">
-                <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-[#D8E1EC]">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white p-1 border border-gray-200 rounded-lg shrink-0 flex items-center justify-center">
-                    <img 
-                      src={upiQrUrl} 
-                      alt="UPI QR Code" 
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                    />
+                {cleanUpiId ? (
+                  <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-[#D8E1EC]">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 bg-white p-1 border border-gray-200 rounded-lg shrink-0 flex items-center justify-center">
+                      <img 
+                        src={upiQrUrl} 
+                        alt="UPI QR Code" 
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-bold text-[#64748B] uppercase">Scan & Pay via any UPI App</div>
+                      <div className="text-sm font-extrabold text-[#15803D] font-mono mt-0.5">₹{netPayable.toFixed(2)}</div>
+                      <div className="text-xs font-mono text-[#172B4D] truncate mt-1">VPA: {cleanUpiId}</div>
+                      <div className="text-[10px] text-[#94A3B8] mt-0.5">GPay • PhonePe • Paytm • BHIM</div>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-bold text-[#64748B] uppercase">Scan & Pay via any UPI App</div>
-                    <div className="text-sm font-extrabold text-[#15803D] font-mono mt-0.5">₹{netPayable.toFixed(2)}</div>
-                    <div className="text-xs font-mono text-[#172B4D] truncate mt-1">VPA: {cleanUpiId}</div>
-                    <div className="text-[10px] text-[#94A3B8] mt-0.5">GPay • PhonePe • Paytm • BHIM</div>
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5 text-xs text-amber-900">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                      <span>Store UPI ID Not Configured</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      To display your dynamic QR code and receive payments straight into your bank account, please enter your UPI ID in <strong>Settings &gt; Shop Profile</strong>.
+                    </p>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-[11px] font-bold text-[#172B4D] mb-1">UPI UTR / Reference ID (Optional)</label>

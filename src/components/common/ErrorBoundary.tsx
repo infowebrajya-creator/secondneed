@@ -142,7 +142,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {/* Support Info */}
               <div className="pt-2 text-center text-[11px] text-[#64748B] flex items-center justify-center gap-1">
                 <LifeBuoy className="w-3.5 h-3.5 text-[#2563EB]" />
-                <span>Assistance: <strong>+91 94251 74721</strong> (Chandra Trading)</span>
+                <span>Support: <strong>WebRajya Helpdesk &amp; Technical Support</strong></span>
               </div>
             </div>
           </div>

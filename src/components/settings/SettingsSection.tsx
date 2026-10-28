@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
   Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor,
-  Volume2, VolumeX
+  Volume2, VolumeX, Bluetooth
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
@@ -17,6 +17,14 @@ import {
   pairUsbPrinter, testUsbPrinter, testUsbCut, testUsbCashDrawer, 
   getUsbPrinterStatus, isWebUsbSupported 
 } from '../../lib/usbPrinter';
+import {
+  isBluetoothSupported,
+  isBluetoothPrinterConnected,
+  getConnectedBluetoothName,
+  connectBluetoothPrinter,
+  disconnectBluetoothPrinter,
+  printTestBluetooth
+} from '../../lib/bluetoothPrinter';
 
 interface SettingsSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -66,14 +74,33 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const [isPairingUsb, setIsPairingUsb] = useState(false);
   const [isTestingUsb, setIsTestingUsb] = useState(false);
 
+  // Wireless Bluetooth Hardware Pairing State (Mobile / Handheld)
+  const [bluetoothConnected, setBluetoothConnected] = useState(isBluetoothPrinterConnected());
+  const [bluetoothDeviceName, setBluetoothDeviceName] = useState(getConnectedBluetoothName());
+  const [isPairingBluetooth, setIsPairingBluetooth] = useState(false);
+  const [isTestingBluetooth, setIsTestingBluetooth] = useState(false);
+
   useEffect(() => {
     loadSettings();
     setUsbStatus(getUsbPrinterStatus());
+    setBluetoothConnected(isBluetoothPrinterConnected());
+    setBluetoothDeviceName(getConnectedBluetoothName());
+
+    const handleBtStatus = (e: any) => {
+      setBluetoothConnected(!!e.detail?.connected);
+      setBluetoothDeviceName(e.detail?.deviceName || null);
+    };
+    window.addEventListener('webrajya_bluetooth_status', handleBtStatus);
+
     if (isInsideElectron && window.electronAPI) {
       window.electronAPI.getPrinters().then((printers) => {
         setNativePrinters(printers);
       }).catch(err => console.warn('Could not fetch native printers:', err));
     }
+
+    return () => {
+      window.removeEventListener('webrajya_bluetooth_status', handleBtStatus);
+    };
   }, [isInsideElectron]);
 
   const handleSelectNativePrinter = (printerName: string) => {
@@ -101,7 +128,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         </head>
         <body>
           <div class="c b">*** WEBRAJYA INVOICE ***</div>
-          <div class="c">${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}</div>
+          <div class="c">${shopProfile.shopName || 'Retail Store'}</div>
           <div class="line"></div>
           <div>TEST PRINT: Native Windows Silent Spooler</div>
           <div>TARGET PRINTER: ${selectedNativePrinter || 'System Default'}</div>
@@ -168,6 +195,41 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
       onToast('success', 'Cash Drawer Pulse Sent', 'Pulse command sent to drawer pin.');
     } else {
       onToast('error', 'Drawer Pulse Failed', res.error);
+    }
+  };
+
+  const handlePairBluetooth = async () => {
+    if (!isBluetoothSupported()) {
+      onToast('error', 'Bluetooth Unavailable', 'Web Bluetooth requires Chrome on Android or a supported browser over HTTPS.');
+      return;
+    }
+    setIsPairingBluetooth(true);
+    const res = await connectBluetoothPrinter();
+    setIsPairingBluetooth(false);
+    setBluetoothConnected(isBluetoothPrinterConnected());
+    setBluetoothDeviceName(getConnectedBluetoothName());
+    if (res.success) {
+      onToast('success', 'Bluetooth Printer Paired!', `Connected to ${res.deviceName || 'Wireless Printer'}`);
+    } else {
+      onToast('error', 'Bluetooth Pairing Failed', res.error);
+    }
+  };
+
+  const handleDisconnectBluetooth = async () => {
+    await disconnectBluetoothPrinter();
+    setBluetoothConnected(false);
+    setBluetoothDeviceName(null);
+    onToast('info', 'Bluetooth Disconnected', 'Printer connection released.');
+  };
+
+  const handleTestBluetoothPrint = async () => {
+    setIsTestingBluetooth(true);
+    const res = await printTestBluetooth(shopProfile.shopName || 'WEBRAJYA POS');
+    setIsTestingBluetooth(false);
+    if (res.success) {
+      onToast('success', 'Bluetooth Test Printed!', 'Wirelessly transmitted ESC/POS receipt.');
+    } else {
+      onToast('error', 'Bluetooth Print Failed', res.error);
     }
   };
 
@@ -239,7 +301,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
       : printForm.paperSize === 'A4'
       ? 'A4 Full Page'
       : 'A5 Standard';
-    const engineName = printForm.printEngine === 'usb' ? 'Direct USB' : printForm.printEngine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
+    const engineName = printForm.printEngine === 'usb' ? 'Direct USB' : printForm.printEngine === 'bluetooth' ? 'Wireless Bluetooth' : printForm.printEngine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
     onToast('success', 'Print Settings Saved', `Paper: ${sizeName} | Mode: ${engineName}`);
   };
 
@@ -255,7 +317,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
     const updated = { ...printForm, printEngine: engine };
     setPrintForm(updated);
     await savePrintSettings(updated);
-    const engineName = engine === 'usb' ? 'Direct USB Cable' : engine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
+    const engineName = engine === 'usb' ? 'Direct USB Cable' : engine === 'bluetooth' ? 'Wireless Bluetooth' : engine === 'browser' ? 'Browser Kiosk' : 'Auto Dual-Mode';
     onToast('success', 'Print Engine Updated', `Mode set to: ${engineName}`);
   };
 
@@ -723,7 +785,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                 Choose how WebRajya communicates with your receipt printer to bypass the Chrome print dialog.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 {/* Auto Dual-Mode */}
                 <div
                   onClick={() => handleSelectPrintEngine('auto')}
@@ -747,7 +809,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                       Recommended
                     </span>
                     <p className="text-[11px] text-[#475569] leading-relaxed">
-                      Automatically prints 100% silently via USB cable if connected; gracefully falls back to browser/kiosk print if unplugged.
+                      Automatically prints 100% silently via USB or Bluetooth if connected; gracefully falls back to browser/kiosk print.
                     </p>
                   </div>
                 </div>
@@ -776,6 +838,34 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                     </span>
                     <p className="text-[11px] text-[#475569] leading-relaxed">
                       Sends raw ESC/POS binary bytes straight over the USB wire. Triggers instant printing, auto-cutter, and cash drawer kick.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Wireless Bluetooth */}
+                <div
+                  onClick={() => handleSelectPrintEngine('bluetooth')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    printForm.printEngine === 'bluetooth'
+                      ? 'border-[#7C3AED] bg-[#FAF5FF] shadow-xs ring-2 ring-[#7C3AED]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Bluetooth className={`w-4 h-4 ${printForm.printEngine === 'bluetooth' ? 'text-[#7C3AED]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">Wireless Bluetooth</span>
+                      </div>
+                      {printForm.printEngine === 'bluetooth' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#7C3AED]" />
+                      )}
+                    </div>
+                    <span className="inline-block px-1.5 py-0.5 text-[9px] font-black uppercase bg-[#EDE9FE] text-[#6D28D9] rounded mb-1.5">
+                      Mobile & Tablet
+                    </span>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Connects wirelessly over Web Bluetooth to portable 58mm or 80mm ESC/POS printers. Perfect for phone billing counters.
                     </p>
                   </div>
                 </div>
@@ -964,6 +1054,71 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                       <div className="text-[10px] text-[#64748B]">Sends electrical pulse to drawer pin 2</div>
                     </div>
                   </label>
+                </div>
+              </div>
+
+              {/* Wireless Bluetooth Thermal Printer Hardware Pairing Box (Mobile & Tablet) */}
+              <div className="p-4 bg-[#FAF5FF] border border-purple-200 rounded-2xl space-y-3.5 mt-3 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${bluetoothConnected ? 'bg-purple-600 text-white shadow-xs' : 'bg-purple-100 text-purple-700'}`}>
+                      <Bluetooth className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-[#0F172A]">
+                          Wireless Bluetooth Thermal Printer (Mobile / Handheld)
+                        </span>
+                        {bluetoothConnected ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span>
+                            Connected
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                            Not Connected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        {bluetoothDeviceName ? `Active Device: ${bluetoothDeviceName}` : 'Pair with portable 58mm or 80mm Bluetooth receipt printer for wireless mobile counter billing.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handlePairBluetooth}
+                      disabled={isPairingBluetooth}
+                      className="px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer active:scale-95"
+                    >
+                      <Bluetooth className="w-3.5 h-3.5" />
+                      <span>{isPairingBluetooth ? 'Scanning...' : bluetoothConnected ? 'Re-pair Bluetooth' : 'Pair Bluetooth Printer'}</span>
+                    </button>
+                    {bluetoothConnected && (
+                      <button
+                        type="button"
+                        onClick={handleDisconnectBluetooth}
+                        className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer active:scale-95"
+                      >
+                        Disconnect
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-[#64748B] mr-1">Bluetooth Tests:</span>
+                  <button
+                    type="button"
+                    onClick={handleTestBluetoothPrint}
+                    disabled={isTestingBluetooth || !bluetoothConnected}
+                    className="px-3 py-1.5 bg-white hover:bg-[#F1F5F9] disabled:opacity-40 text-[#172B4D] border border-[#CBD5E1] rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#7C3AED]" />
+                    <span>{isTestingBluetooth ? 'Sending...' : 'Test Bluetooth Print'}</span>
+                  </button>
                 </div>
               </div>
 

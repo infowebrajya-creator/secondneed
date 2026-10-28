@@ -1,6 +1,7 @@
 import { Invoice, ShopProfile, PrintSettings } from '../types';
 import { numberToWordsIndian } from '../utils/numberToWords';
 import { printInvoiceSilentUsb, isUsbPrinterConnected } from './usbPrinter';
+import { printInvoiceSilentBluetooth, isBluetoothPrinterConnected } from './bluetoothPrinter';
 
 export { numberToWordsIndian };
 
@@ -83,10 +84,10 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
 
   // Determine header party text
   const isPartyGiven = invoice.customerName && invoice.customerName.trim().toLowerCase() !== 'cash customer';
-  const partyLine1 = isPartyGiven ? `M/s ${invoice.customerName.trim().toUpperCase()}` : `M/s ${shop.shopName || 'CHANDRA TRADING COMPANY'}`;
+  const partyLine1 = isPartyGiven ? `M/s ${invoice.customerName.trim().toUpperCase()}` : `M/s ${shop.shopName || 'Retail Store'}`;
   const partyLine2 = isPartyGiven
-    ? (invoice.customerAddress ? invoice.customerAddress.trim().toUpperCase() : 'PALARI')
-    : (shop.address || 'NEW SHUKRAWARI MARKET, SEONI (M.P.)');
+    ? (invoice.customerAddress ? invoice.customerAddress.trim().toUpperCase() : '')
+    : (shop.address || '');
 
   const html = `
     <!DOCTYPE html>
@@ -355,7 +356,7 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
 
             <div class="header-center">
               <div class="doc-title">${docTitle}</div>
-              ${isPartyGiven ? `<div class="shop-tag">M/s ${shop.shopName || 'CHANDRA TRADING COMPANY'}</div>` : ''}
+              ${isPartyGiven ? `<div class="shop-tag">M/s ${shop.shopName || 'Retail Store'}</div>` : ''}
             </div>
 
             <div class="header-right">
@@ -465,7 +466,7 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
         </div>
 
         <div class="sub-footer-text">
-          CHANDRA TRADING COMPANY | POS SOFTWARE PRINT ENGINE
+          ${shop.shopName ? shop.shopName.toUpperCase() : 'WEBRAJYA POS'} | POS SOFTWARE PRINT ENGINE
         </div>
 
         <script>
@@ -587,7 +588,7 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
 
   const termsList = shop.termsAndConditions
     ? shop.termsAndConditions.split('\n').filter(t => t.trim() !== '')
-    : ['Goods once sold will not be taken back without bill.', 'All disputes subject to Seoni jurisdiction.'];
+    : ['Goods once sold will not be taken back without bill.', 'All disputes subject to jurisdiction only.'];
 
   const grossSubtotal = invoice.subtotal + (invoice.totalDiscount || 0);
 
@@ -686,7 +687,7 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
         <div class="receipt-container">
           <!-- 1. Header Details -->
           <div class="center">
-            <div class="shop-title">${shop.shopName || 'CHANDRA TRADING COMPANY'}</div>
+            <div class="shop-title">${shop.shopName || 'Retail Store'}</div>
             ${shop.tagline ? `<div class="shop-sub">${shop.tagline}</div>` : ''}
             <div class="shop-meta">
               ${shop.address ? `${shop.address}<br />` : ''}
@@ -858,8 +859,22 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
 }
 
 export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  // Check if Web Bluetooth printing should be attempted (mobile / wireless)
+  const shouldTryBluetooth = printSettings?.printEngine === 'bluetooth' || (printSettings?.printEngine === 'auto' && isBluetoothPrinterConnected());
+  if (shouldTryBluetooth) {
+    try {
+      const btRes = await printInvoiceSilentBluetooth(invoice, shop, printSettings);
+      if (btRes.success) {
+        return { success: true, method: 'bluetooth' as const };
+      }
+      console.warn('[Print] Bluetooth print error, falling back:', btRes.error);
+    } catch (err) {
+      console.warn('[Print] Bluetooth exception, falling back:', err);
+    }
+  }
+
   // Check if WebUSB silent printing should be attempted
-  const shouldTryUsb = printSettings?.printEngine === 'usb' || (printSettings?.printEngine !== 'browser' && isUsbPrinterConnected());
+  const shouldTryUsb = printSettings?.printEngine === 'usb' || (printSettings?.printEngine === 'auto' && isUsbPrinterConnected());
   if (shouldTryUsb) {
     try {
       const usbRes = await printInvoiceSilentUsb(invoice, shop, printSettings);
@@ -920,7 +935,7 @@ export function generate58mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
         </style>
       </head>
       <body>
-        <div class="c b" style="font-size: 11px;">${shop.shopName || 'CHANDRA TRADING CO.'}</div>
+        <div class="c b" style="font-size: 11px;">${shop.shopName || 'Retail Store'}</div>
         <div class="c" style="font-size: 7.5px;">
           ${shop.address ? `<div>${shop.address}</div>` : ''}
           ${shop.phone ? `<div>Ph: ${shop.phone}</div>` : ''}
@@ -955,6 +970,34 @@ export function generate58mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
 }
 
 export async function trigger58mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+  // Check if Web Bluetooth printing should be attempted (portable mini 58mm POS printers)
+  const shouldTryBluetooth = printSettings?.printEngine === 'bluetooth' || (printSettings?.printEngine === 'auto' && isBluetoothPrinterConnected());
+  if (shouldTryBluetooth) {
+    try {
+      const btRes = await printInvoiceSilentBluetooth(invoice, shop, printSettings);
+      if (btRes.success) {
+        return { success: true, method: 'bluetooth' as const };
+      }
+      console.warn('[Print 58mm] Bluetooth print error, falling back:', btRes.error);
+    } catch (err) {
+      console.warn('[Print 58mm] Bluetooth exception, falling back:', err);
+    }
+  }
+
+  // Check if WebUSB silent printing should be attempted
+  const shouldTryUsb = printSettings?.printEngine === 'usb' || (printSettings?.printEngine === 'auto' && isUsbPrinterConnected());
+  if (shouldTryUsb) {
+    try {
+      const usbRes = await printInvoiceSilentUsb(invoice, shop, printSettings);
+      if (usbRes.success) {
+        return { success: true, method: 'usb' as const };
+      }
+      console.warn('[Print 58mm] USB print error, falling back:', usbRes.error);
+    } catch (err) {
+      console.warn('[Print 58mm] USB exception, falling back:', err);
+    }
+  }
+
   const html = generate58mmReceiptHtml(invoice, shop, printSettings);
   executeBrowserPrint(html, 320, 600, true);
   return { success: true, method: (typeof window !== 'undefined' && window.electronAPI?.isElectron) ? ('electron' as const) : ('browser' as const) };

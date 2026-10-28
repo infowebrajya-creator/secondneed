@@ -302,11 +302,11 @@ export function generateCaReportHtml(data: CaReportData): string {
         <!-- Header Banner -->
         <div class="header-banner">
           <div>
-            <div class="business-title">${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}</div>
-            <div class="business-sub">${shopProfile.tagline || 'STATIONERY WHOLESALE & RETAIL TRADING'}</div>
+            <div class="business-title">${shopProfile.shopName || 'Retail Store'}</div>
+            <div class="business-sub">${shopProfile.tagline || 'RETAIL & WHOLESALE TRADING'}</div>
             <div class="business-meta">
-              <strong>Address:</strong> ${shopProfile.address || 'Seoni, Madhya Pradesh'}<br />
-              <strong>GSTIN:</strong> ${shopProfile.gstin || '23ACSPV5903B1ZK'} &nbsp;|&nbsp; <strong>State:</strong> ${shopProfile.state || 'Madhya Pradesh (23)'}<br />
+              <strong>Address:</strong> ${shopProfile.address || 'Address Not Configured'}<br />
+              <strong>GSTIN:</strong> ${shopProfile.gstin || 'Not Provided'} &nbsp;|&nbsp; <strong>State:</strong> ${shopProfile.state || 'Madhya Pradesh (23)'}<br />
               <strong>Phone:</strong> ${shopProfile.phone || ''} &nbsp;|&nbsp; <strong>Email:</strong> ${shopProfile.email || ''}
             </div>
           </div>
@@ -536,7 +536,7 @@ export function generateCaReportHtml(data: CaReportData): string {
             3. Tax calculations and summaries are compiled from recorded line items and do not constitute statutory certification or GST filing approval.
           </div>
           <div class="signatory-box">
-            For <strong>${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}</strong><br />
+            For <strong>${shopProfile.shopName || 'Retail Store'}</strong><br />
             <br />
             <br />
             Authorised Signatory / Proprietor

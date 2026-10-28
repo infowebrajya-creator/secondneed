@@ -22,7 +22,7 @@ export function exportCaMasterExcelWorkbook(data: CaReportData) {
   // --- SHEET 1: Executive Summary & Tax Matrix ---
   const summaryAoa: any[][] = [
     ['WEBRAJYA INVOICE - CHARTERED ACCOUNTANT REPORT PACK'],
-    [`Business Name: ${shopProfile.shopName || 'CHANDRA TRADING COMPANY'}`],
+    [`Business Name: ${shopProfile.shopName || 'Retail Store'}`],
     [`GSTIN: ${shopProfile.gstin || 'Not Provided'} | State: ${shopProfile.state || 'Madhya Pradesh (23)'}`],
     [`Address: ${shopProfile.address || ''} | Contact: ${shopProfile.phone || ''}`],
     [`Reporting Period: ${period.label} (${period.startDate} to ${period.endDate})`],

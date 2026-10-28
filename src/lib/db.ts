@@ -42,20 +42,20 @@ export const db = new WebRajyaDatabase();
 
 // Default Shop Profile Settings
 export const DEFAULT_SHOP_PROFILE: ShopProfile = {
-  shopName: 'CHANDRA TRADING COMPANY',
-  tagline: 'Stationery Wholesaler / Trading',
-  address: 'New Shukrawari Market, Seoni, Madhya Pradesh - 480661',
-  phone: '+91 94251 74721',
-  email: 'mjain21@gmail.com',
-  gstin: '23ACSPV5903B1ZK',
+  shopName: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SHOP_NAME && import.meta.env.VITE_SHOP_NAME !== 'CHANDRA TRADING COMPANY') ? import.meta.env.VITE_SHOP_NAME : 'WebRajya Retail POS',
+  tagline: 'Retail & Stationery Billing',
+  address: 'Main Market Road',
+  phone: '',
+  email: '',
+  gstin: '',
   state: 'Madhya Pradesh (23)',
-  pincode: '480661',
-  bankName: 'State Bank of India',
-  accountNo: '34567890123',
-  ifscCode: 'SBIN0001234',
-  upiId: 'mjain21@sbi',
-  invoicePrefix: 'CTC-',
-  termsAndConditions: '1. Goods once sold will not be taken back without bill.\n2. Warranty as per manufacturer guidelines.\n3. Subject to Seoni jurisdiction.'
+  pincode: '',
+  bankName: '',
+  accountNo: '',
+  ifscCode: '',
+  upiId: '',
+  invoicePrefix: 'INV-',
+  termsAndConditions: '1. Goods once sold will not be taken back without bill.\n2. Warranty as per manufacturer guidelines.\n3. Subject to local jurisdiction.'
 };
 
 export const DEFAULT_PRINT_SETTINGS: PrintSettings = {

@@ -344,7 +344,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     }
   },
 
-  createCompletedInvoice: async (invoiceData, invoicePrefix = 'CTC-') => {
+  createCompletedInvoice: async (invoiceData, invoicePrefix = 'INV-') => {
     // 1. VALIDATION CHECKS
     if (!invoiceData.items || invoiceData.items.length === 0) {
       throw new Error('CANNOT_COMPLETE_SALE: Invoice must contain at least one item.');

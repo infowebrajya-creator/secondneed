@@ -82,11 +82,17 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
       .slice(0, 12);
   }, [products]);
 
+  const triggerHaptic = (pattern: number | number[] = 20) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (_) {}
+    }
+  };
+
   // 1-Tap Quick Product Adder with Haptic Touch & Audio Beep
   const handleQuickTapProduct = (prod: Product) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(30);
-    }
+    triggerHaptic(25);
     playBeep();
     addItemByProduct(prod, 1);
   };
@@ -160,10 +166,12 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
     }
 
     if (found) {
+      triggerHaptic([35, 30, 35]);
       handleQuickTapProduct(found);
       setSearchQuery('');
       onToast('success', 'Barcode Added to Bill', `Added "${found.name}" (₹${found.saleRate}) to cart.`);
     } else {
+      triggerHaptic([70, 40, 70]);
       playError();
       setSearchQuery(rawCode);
       onToast('info', 'Barcode Scanned', `Scanned: "${rawCode}". No exact match found, searching catalog.`);
@@ -703,8 +711,11 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="p-1.5 text-[#94A3B8] hover:text-[#B91C1C] rounded-lg hover:bg-red-50 transition-colors"
+                      onClick={() => {
+                        triggerHaptic(30);
+                        removeItem(item.id);
+                      }}
+                      className="p-1.5 text-[#94A3B8] hover:text-[#B91C1C] rounded-lg hover:bg-red-50 transition-colors cursor-pointer active:scale-95"
                       title="Remove Item"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -771,8 +782,11 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
                   <div className="flex items-center gap-1.5 bg-[#F1F5F9] border border-[#CBD5E1] rounded-lg p-0.5">
                     <button
                       type="button"
-                      onClick={() => updateItemQty(item.id, Math.max(1, item.qty - 1))}
-                      className="w-8 h-8 rounded bg-white text-[#172B4D] flex items-center justify-center font-bold text-sm shadow-2xs active:bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        triggerHaptic(15);
+                        updateItemQty(item.id, Math.max(1, item.qty - 1));
+                      }}
+                      className="w-8 h-8 rounded bg-white text-[#172B4D] flex items-center justify-center font-bold text-sm shadow-2xs active:bg-gray-100 cursor-pointer active:scale-90 transition-transform"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
@@ -787,8 +801,11 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => updateItemQty(item.id, item.qty + 1)}
-                      className="w-8 h-8 rounded bg-white text-[#172B4D] flex items-center justify-center font-bold text-sm shadow-2xs active:bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        triggerHaptic(15);
+                        updateItemQty(item.id, item.qty + 1);
+                      }}
+                      className="w-8 h-8 rounded bg-white text-[#172B4D] flex items-center justify-center font-bold text-sm shadow-2xs active:bg-gray-100 cursor-pointer active:scale-90 transition-transform"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
@@ -828,7 +845,10 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
         <button
           type="button"
           disabled={items.length === 0}
-          onClick={onOpenQuickPay}
+          onClick={() => {
+            triggerHaptic(30);
+            onOpenQuickPay();
+          }}
           className="px-5 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-md active:scale-95 transition-all cursor-pointer"
         >
           <span>Settle Bill</span>

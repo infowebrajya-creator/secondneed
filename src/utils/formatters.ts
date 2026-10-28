@@ -33,8 +33,8 @@ export function generateInvoiceNumber(prefix: string = 'WR-', lastCount: number 
   return `${prefix}${yearSuffix}-${nextNum.toString().padStart(5, '0')}`;
 }
 
-export function calculateNextInvoiceNumber(existingNumbers: string[], prefix: string = 'CTC-'): string {
-  const cleanPrefix = prefix || 'CTC-';
+export function calculateNextInvoiceNumber(existingNumbers: string[], prefix: string = 'INV-'): string {
+  const cleanPrefix = prefix || 'INV-';
   const yearSuffix = new Date().getFullYear().toString().slice(-2);
   const escapedPrefix = cleanPrefix.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const pattern = new RegExp(`^${escapedPrefix}${yearSuffix}-(\\d+)$`);

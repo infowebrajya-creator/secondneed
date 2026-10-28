@@ -157,7 +157,7 @@ export function build80mmEscPos(
 
   // 1. Header
   p.alignCenter();
-  p.doubleSize(true).bold(true).line(shop.shopName || 'CHANDRA TRADING COMPANY').doubleSize(false).bold(false);
+  p.doubleSize(true).bold(true).line(shop.shopName || 'Retail Store').doubleSize(false).bold(false);
   if (shop.tagline) {
     p.line(shop.tagline);
   }
@@ -278,6 +278,8 @@ export function build80mmEscPos(
 
   return p.build();
 }
+
+export const buildInvoiceEscPos = build80mmEscPos;
 
 /**
  * Builds a small diagnostic test receipt to verify USB printer communication
