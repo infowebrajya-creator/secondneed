@@ -3,7 +3,7 @@ import {
   KeyRound, Mail, Eye, EyeOff, LogIn, Globe, Package, 
   Receipt, ShoppingBag, ShieldCheck, Headphones, AlertCircle, ArrowRight, Sparkles, Download
 } from 'lucide-react';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useAuthStore, isMobileAppVersion } from '../../store/useAuthStore';
 import { WINDOWS_EXE_URL } from '../../utils/constants';
 
 interface LoginPageProps {
@@ -12,9 +12,11 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
   const { login } = useAuthStore();
+  const isMobile = isMobileAppVersion();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
     setIsLoading(true);
 
     setTimeout(() => {
-      const res = login(email, password);
+      const res = login(email, password, rememberDevice);
       setIsLoading(false);
       if (!res.success) {
         setErrorMsg(res.message || 'Invalid credentials');
@@ -182,6 +184,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+
+            {/* 1-Time Login / Remember Session */}
+            <div className="flex items-center justify-between text-xs py-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-[#6B5E4C] hover:text-[#0F172A] font-medium">
+                <input
+                  type="checkbox"
+                  checked={rememberDevice}
+                  onChange={(e) => setRememberDevice(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#E5D7C3] text-[#D9683E] focus:ring-[#D9683E]/30 accent-[#D9683E] cursor-pointer"
+                />
+                <span>
+                  {isMobile ? (
+                    <strong className="text-emerald-700">✓ 1-Time Login: Stay signed in on this mobile phone</strong>
+                  ) : (
+                    'Keep me signed in on this computer'
+                  )}
+                </span>
+              </label>
             </div>
 
             <button
