@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
   Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor,
-  Volume2, VolumeX, Bluetooth, ShoppingBag, MessageCircle, Image as ImageIcon
+  Volume2, VolumeX, Bluetooth, ShoppingBag, MessageCircle, Image as ImageIcon,
+  ArrowLeft, ChevronRight, Settings
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
@@ -42,7 +43,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const { syncWithSupabase: syncProducts } = useProductStore();
   const { syncInvoicesWithSupabase: syncInvoices } = useSalesStore();
 
-  const [activeTab, setActiveTab] = useState<'shop' | 'billing' | 'print' | 'backup' | 'sound'>('shop');
+  const [activeTab, setActiveTab] = useState<'shop' | 'billing' | 'print' | 'backup' | 'sound' | null>(null);
   const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => 
     typeof window !== 'undefined' ? localStorage.getItem('webrajya_last_backup_date') : null
@@ -403,140 +404,233 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
     }
   };
 
-  return (
-    <div className="flex flex-col h-auto md:h-[calc(100vh-4.5rem)] gap-3 font-sans text-[#172B4D] pb-24 md:pb-0">
-      {/* Top Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-[#D8E1EC] rounded-xl p-3 sm:p-4 shadow-sm shrink-0">
-        <div>
-          <h2 className="text-base font-extrabold text-[#172B4D] flex items-center gap-2">
-            <Store className="w-5 h-5 text-[#2563EB]" /> Settings & Configuration
-          </h2>
-          <p className="text-xs text-[#64748B] mt-0.5">Manage shop profile, A5 print layout, Supabase credentials, and data backups</p>
+  const renderOfficialAppsBanner = () => (
+    isInsideElectron ? (
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
+            <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 px-2 py-0.5 rounded text-white flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                Windows Desktop App Active
+              </span>
+              <span className="text-xs font-black text-white">WebRajya Native Edition</span>
+            </div>
+            <p className="text-[11px] text-blue-100/80 mt-0.5">
+              Running with native Windows print spooler access & 0-click silent printing.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="/brochure.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/20 flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Open Printable A4 Product Brochure"
+          >
+            <FileText className="w-3.5 h-3.5 text-blue-200" />
+            <span>Sales Brochure</span>
+          </a>
+          <span className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-blue-200 border border-white/15">
+            Desktop Client v1.0.0
+          </span>
+        </div>
+      </div>
+    ) : (
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#123B70] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
+            <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-[#2563EB] px-2 py-0.5 rounded text-white">
+                Official Apps
+              </span>
+              <span className="text-xs font-black text-white">Get WebRajya for Windows & Mobile</span>
+            </div>
+            <p className="text-[11px] text-blue-100/80 mt-0.5">
+              Download Windows .exe for 0-click silent printing, or install Chrome PWA on mobile/tablet.
+            </p>
+          </div>
         </div>
 
-        {/* Tab Switcher - Horizontally scrollable on mobile */}
-        <div className="flex gap-1 bg-[#F5F9FF] p-1 rounded-xl border border-[#D8E1EC] text-xs font-semibold overflow-x-auto touch-scroll no-scrollbar">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
+          <a
+            href="/brochure.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-white/20 transition-all cursor-pointer"
+            title="Open Printable A4 Product Brochure"
+          >
+            <FileText className="w-4 h-4 text-blue-200" />
+            <span>Sales Brochure</span>
+          </a>
+
           <button
             type="button"
-            onClick={() => setActiveTab('shop')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'shop' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+            onClick={() => {
+              setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
+              setIsInstallModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
           >
-            Shop Profile
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('billing')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'billing' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
-          >
-            Invoice & Tax Modes
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('print')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'print' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
-          >
-            Print & Paper Settings
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('backup')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'backup' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
-          >
-            Backup & Restore
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('sound')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'sound' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
-          >
-            Sound & Audio FX
+            <Download className="w-4 h-4 text-emerald-200" />
+            <span>{isInstalled || isStandalone ? 'App Ready • Open Info' : 'Download / Install App'}</span>
           </button>
         </div>
       </div>
+    )
+  );
 
-      {/* Main Tab Panels */}
-      <div className="flex-1 bg-white border border-[#D8E1EC] rounded-xl overflow-y-auto p-4 sm:p-6 text-xs shadow-sm">
-        {/* Windows Desktop or PWA App Installation Banner Card */}
-        {isInsideElectron ? (
-          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#0F172A] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
+  const settingCategories = [
+    {
+      id: 'shop' as const,
+      title: 'Shop Profile & Header',
+      subtitle: 'Store name, address, GSTIN, phone, bank details & invoice tagline',
+      icon: <Store className="w-5 h-5 text-[#2563EB]" />,
+      iconBg: 'bg-blue-50 text-[#2563EB] border-blue-200',
+      meta: shopProfile.shopName || 'Configured'
+    },
+    {
+      id: 'billing' as const,
+      title: 'Invoice & Tax Modes',
+      subtitle: 'Counter document modes (GST/Simple), statutory modes & WhatsApp receipt format',
+      icon: <Receipt className="w-5 h-5 text-[#16A34A]" />,
+      iconBg: 'bg-emerald-50 text-[#16A34A] border-emerald-200',
+      meta: billingForm.defaultInvoiceType === 'gst' ? 'GST Mode' : 'Simple Mode'
+    },
+    {
+      id: 'print' as const,
+      title: 'Print & Paper Settings',
+      subtitle: 'Paper size (A5 / 80mm / 58mm), Windows silent printing, auto-cut & cash drawer',
+      icon: <Printer className="w-5 h-5 text-[#D97706]" />,
+      iconBg: 'bg-amber-50 text-[#D97706] border-amber-200',
+      meta: printSettings?.paperSize || 'A5'
+    },
+    {
+      id: 'backup' as const,
+      title: 'Data Backup & Restore',
+      subtitle: 'Export JSON v2.0 database backup, restore records & Supabase cloud sync',
+      icon: <Download className="w-5 h-5 text-[#7C3AED]" />,
+      iconBg: 'bg-purple-50 text-[#7C3AED] border-purple-200',
+      meta: 'Backup v2.0'
+    },
+    {
+      id: 'sound' as const,
+      title: 'Sound & Audio Effects',
+      subtitle: 'Barcode scanner beep, cash register chime & sound feedback toggles',
+      icon: soundOn ? <Volume2 className="w-5 h-5 text-[#4F46E5]" /> : <VolumeX className="w-5 h-5 text-[#94A3B8]" />,
+      iconBg: soundOn ? 'bg-indigo-50 text-[#4F46E5] border-indigo-200' : 'bg-slate-100 text-[#94A3B8] border-slate-200',
+      meta: soundOn ? 'Sound ON' : 'Muted'
+    }
+  ];
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-4 font-sans text-[#172B4D] pb-24 md:pb-6">
+      {/* CASE 1: Main Settings Hub Menu (activeTab === null) */}
+      {activeTab === null && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Header Card */}
+          <div className="bg-white border border-[#D8E1EC] rounded-2xl p-4 sm:p-5 shadow-xs">
             <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
-                <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#2563EB]/10 to-[#1E3A8A]/15 border border-[#2563EB]/25 flex items-center justify-center text-[#2563EB] shadow-2xs shrink-0">
+                <Store className="w-6 h-6" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 px-2 py-0.5 rounded text-white flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                    Windows Desktop App Active
-                  </span>
-                  <span className="text-xs font-black text-white">WebRajya Native Edition</span>
-                </div>
-                <p className="text-[11px] text-blue-100/80 mt-0.5">
-                  Running with native Windows print spooler access & 0-click silent printing.
+                <h2 className="text-base sm:text-lg font-black text-[#172B4D] tracking-tight">
+                  Settings & Configuration
+                </h2>
+                <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
+                  Select a category below to configure store details, billing rules, hardware, and data
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="/brochure.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/20 flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Open Printable A4 Product Brochure"
+          </div>
+
+          {/* 5 Setting Categories List */}
+          <div className="space-y-2.5">
+            {settingCategories.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    try { navigator.vibrate(15); } catch (_) {}
+                  }
+                  setActiveTab(cat.id);
+                }}
+                className="p-4 bg-white hover:bg-[#F8FAFC] border border-[#D8E1EC] hover:border-[#2563EB]/40 rounded-2xl cursor-pointer transition-all shadow-2xs hover:shadow-xs active:scale-[0.99] flex items-center justify-between gap-3 group"
               >
-                <FileText className="w-3.5 h-3.5 text-blue-200" />
-                <span>Sales Brochure</span>
-              </a>
-              <span className="px-3 py-1.5 rounded-lg bg-white/10 text-xs font-bold text-blue-200 border border-white/15">
-                Desktop Client v1.0.0
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${cat.iconBg} group-hover:scale-105 transition-transform`}>
+                    {cat.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-extrabold text-[#172B4D] group-hover:text-[#2563EB] transition-colors truncate">
+                        {cat.title}
+                      </h3>
+                      {cat.meta && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F1F5F9] text-[#475569] border border-[#CBD5E1] shrink-0 hidden sm:inline-block">
+                          {cat.meta}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed line-clamp-1">
+                      {cat.subtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] group-hover:text-[#2563EB] group-hover:translate-x-1 transition-all shrink-0">
+                  <ChevronRight className="w-5 h-5" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Official Apps Card at bottom of Hub */}
+          <div className="pt-1">
+            {renderOfficialAppsBanner()}
+          </div>
+        </div>
+      )}
+
+      {/* CASE 2: Active Sub-Setting Detail (activeTab !== null) */}
+      {activeTab !== null && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Top Sticky Navigation Bar with Back Button */}
+          <div className="flex items-center justify-between bg-white border border-[#D8E1EC] rounded-2xl px-4 py-3 shadow-xs sticky top-0 z-20">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                  try { navigator.vibrate(15); } catch (_) {}
+                }
+                setActiveTab(null);
+              }}
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Settings</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-[#172B4D] uppercase tracking-wider flex items-center gap-1.5">
+                {activeTab === 'shop' && <><Store className="w-4 h-4 text-[#2563EB]" /> Shop Profile</>}
+                {activeTab === 'billing' && <><Receipt className="w-4 h-4 text-[#16A34A]" /> Invoice & Tax Modes</>}
+                {activeTab === 'print' && <><Printer className="w-4 h-4 text-[#D97706]" /> Print & Paper</>}
+                {activeTab === 'backup' && <><Download className="w-4 h-4 text-[#7C3AED]" /> Backup & Restore</>}
+                {activeTab === 'sound' && <><Volume2 className="w-4 h-4 text-[#4F46E5]" /> Sound & Audio</>}
               </span>
             </div>
           </div>
-        ) : (
-          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#123B70] to-[#1E3A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-blue-900/40">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-white p-1 shrink-0 overflow-hidden shadow-xs">
-                <img src="/logo.png" alt="WebRajya Logo" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-[#2563EB] px-2 py-0.5 rounded text-white">
-                    Official Apps
-                  </span>
-                  <span className="text-xs font-black text-white">Get WebRajya for Windows & Mobile</span>
-                </div>
-                <p className="text-[11px] text-blue-100/80 mt-0.5">
-                  Download Windows .exe for 0-click silent printing, or install Chrome PWA on mobile/tablet.
-                </p>
-              </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
-              <a
-                href="/brochure.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-white/20 transition-all cursor-pointer"
-                title="Open Printable A4 Product Brochure"
-              >
-                <FileText className="w-4 h-4 text-blue-200" />
-                <span>Sales Brochure</span>
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setInstallModalTab(typeof navigator !== 'undefined' && /win/i.test(navigator.userAgent) ? 'windows' : 'pwa');
-                  setIsInstallModalOpen(true);
-                }}
-                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
-              >
-                <Download className="w-4 h-4 text-emerald-200" />
-                <span>{isInstalled || isStandalone ? 'App Ready • Open Info' : 'Download / Install App'}</span>
-              </button>
-            </div>
-          </div>
-        )}
+          {/* Form Container */}
+          <div className="bg-white border border-[#D8E1EC] rounded-2xl p-4 sm:p-6 text-xs shadow-xs">
         {activeTab === 'shop' && (
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#D8E1EC] pb-2">
@@ -1684,7 +1778,24 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         )}
       </div>
 
-      {/* PWA / Windows App Installation Modal */}
+      {/* Secondary Bottom Return Button */}
+      <div className="flex justify-start pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveTab(null);
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#F8FAFC] border border-[#D8E1EC] text-[#475569] hover:text-[#172B4D] rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Settings Menu</span>
+        </button>
+      </div>
+    </div>
+  )}
+
+  {/* PWA / Windows App Installation Modal */}
       <PwaInstallModal
         isOpen={isInstallModalOpen}
         onClose={() => setIsInstallModalOpen(false)}

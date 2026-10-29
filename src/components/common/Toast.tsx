@@ -18,7 +18,7 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-50 flex flex-col gap-2 max-w-sm sm:max-w-md w-auto pointer-events-none mx-auto sm:mx-0">
+    <div className="fixed top-14 sm:top-5 left-3 right-3 sm:left-auto sm:right-6 z-[100] flex flex-col gap-2 max-w-sm sm:max-w-md w-auto pointer-events-none mx-auto sm:mx-0">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}
@@ -55,7 +55,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: (id: string) => void
   return (
     <div
       className={clsx(
-        'pointer-events-auto flex items-start gap-2.5 p-3 rounded-xl border bg-white/95 backdrop-blur-md shadow-lg shadow-slate-900/10 transition-all transform animate-in fade-in slide-in-from-bottom-2 duration-200',
+        'pointer-events-auto flex items-start gap-2.5 p-3 rounded-xl border bg-white/95 backdrop-blur-md shadow-xl shadow-slate-900/10 transition-all transform animate-in fade-in slide-in-from-top-2 duration-200',
         borderStyles[toast.type]
       )}
     >

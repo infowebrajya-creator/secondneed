@@ -33,14 +33,12 @@ export type MainSection = 'billing' | 'products' | 'inventory' | 'customers' | '
 const VALID_SECTIONS: MainSection[] = ['billing', 'products', 'inventory', 'customers', 'sales', 'settings'];
 
 function getInitialSection(): MainSection {
+  // Always open on the Invoicing counter as the primary main home page
   if (typeof window !== 'undefined') {
-    const hash = window.location.hash.replace('#', '') as MainSection;
-    if (VALID_SECTIONS.includes(hash)) {
-      return hash;
-    }
-    const saved = localStorage.getItem('webrajya_active_section') as MainSection;
-    if (saved && VALID_SECTIONS.includes(saved)) {
-      return saved;
+    if (window.location.hash && window.location.hash !== '#billing') {
+      try {
+        window.history.replaceState(null, '', window.location.pathname + '#billing');
+      } catch (_) {}
     }
   }
   return 'billing';
@@ -53,11 +51,10 @@ export function App() {
   const loadInvoices = useSalesStore((state) => state.loadInvoices);
   const cartItemsCount = useBillingStore((state) => state.items.length);
 
-  // Restore current tab on page refresh
+  // Invoicing is the main default page whenever opening the app
   const [activeSection, setActiveSection] = useState<MainSection>(getInitialSection);
 
   useEffect(() => {
-    localStorage.setItem('webrajya_active_section', activeSection);
     window.location.hash = activeSection;
   }, [activeSection]);
 
