@@ -43,6 +43,15 @@ export interface TaxRateBucket {
   transactionCount: number;
 }
 
+export interface Gstr1Table13Item {
+  natureOfDocument: string;
+  fromSrNo: string;
+  toSrNo: string;
+  totalCount: number;
+  cancelledCount: number;
+  netIssuedCount: number;
+}
+
 export interface CaReportData {
   shopProfile: ShopProfile;
   period: ReportPeriod;
@@ -111,4 +120,5 @@ export interface CaReportData {
 
   // Data Integrity & Audit Notes
   validationNotes: string[];
+  docSummaryTable13?: Gstr1Table13Item[];
 }

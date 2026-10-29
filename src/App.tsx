@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { 
   ShoppingBag, Package, Boxes, Users, Receipt, Settings, Store, 
   Headphones, LogOut, FileSpreadsheet, Download, Smartphone, Monitor,
-  ShieldCheck, X, Calculator, LayoutGrid, ChevronDown
+  ShieldCheck, X, Calculator, LayoutGrid, ChevronDown, Maximize2, Minimize2
 } from 'lucide-react';
 import { BillingSection } from './components/billing/BillingSection';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
@@ -74,6 +74,53 @@ export function App() {
 
   const { shopProfile, loadSettings } = useSettingsStore();
   const [isCashRegisterOpen, setIsCashRegisterOpen] = useState(false);
+
+  // Fullscreen state with bi-directional event synchronization
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isDocFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isDocFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!isFullscreen) {
+        const docEl = document.documentElement as any;
+        if (docEl.requestFullscreen) {
+          await docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) {
+          await docEl.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle failed or blocked by browser permissions:', err);
+    }
+  };
 
   const isSyncingRef = useRef(false);
 
@@ -232,7 +279,7 @@ export function App() {
               WEBRAJYA <span className="text-[#FF8A00]">INVOICE</span>
             </h1>
             <span className="hidden sm:inline-block text-[11px] text-blue-200/80 font-medium border-l border-white/20 pl-2 leading-none">
-              GST & Stationery Invoicing
+              GST & Retail Invoicing
             </span>
             <span 
               className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0"
@@ -452,6 +499,26 @@ export function App() {
               </div>
             )}
           </div>
+
+          {/* Fullscreen Kiosk Mode Toggle (Laptop / Desktop Viewports Only) */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`hidden md:inline-flex items-center gap-1.5 font-bold text-xs px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+              isFullscreen
+                ? 'bg-[#1D4ED8] text-cyan-200 border-cyan-300 ring-2 ring-white/20 shadow-md'
+                : 'bg-white/10 hover:bg-white/20 text-white/90 hover:text-white border-white/15 shadow-xs'
+            }`}
+            title={isFullscreen ? 'Exit Full Screen (Esc / F11)' : 'Enter Full Screen (F11 Kiosk Mode)'}
+            aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
+            )}
+            <span className="tracking-wide">{isFullscreen ? 'Exit Full' : 'Full Screen'}</span>
+          </button>
 
           <button
             onClick={() => logout()}

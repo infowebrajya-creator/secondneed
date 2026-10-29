@@ -55,7 +55,7 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-[#D8E1EC] rounded-xl p-3 sm:p-4 shadow-xs shrink-0 gap-2.5 sm:gap-3">
         <div>
           <h2 className="text-sm sm:text-base font-extrabold text-[#172B4D] flex items-center gap-2">
-            <Boxes className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" /> Stationery Inventory & Valuation
+            <Boxes className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" /> Retail Inventory & Valuation
           </h2>
           <p className="text-[11px] sm:text-xs text-[#64748B] mt-0.5">
             Monitor real-time stock balances, valuations, and supplier purchase bills
@@ -110,7 +110,7 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
               <span>{products.length.toLocaleString('en-IN')}</span>
               <span className="text-xs sm:text-sm font-semibold text-[#64748B] font-sans">SKUs</span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Active stationery catalog</p>
+            <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 truncate">Active product catalog</p>
           </div>
         </div>
 
@@ -175,7 +175,7 @@ export const InventorySection: React.FC<InventorySectionProps> = ({ onToast }) =
         {/* Stock Status Table */}
         <div className="col-span-1 lg:col-span-7 bg-white border border-[#D8E1EC] rounded-xl overflow-hidden flex flex-col shadow-xs">
           <div className="p-3 bg-[#F5F9FF] border-b border-[#D8E1EC] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <h3 className="text-xs font-extrabold text-[#172B4D] uppercase tracking-wider">Stationery Stock Balances</h3>
+            <h3 className="text-xs font-extrabold text-[#172B4D] uppercase tracking-wider">Retail Stock Balances</h3>
             <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-[#D8E1EC] text-[11px] self-stretch sm:self-auto justify-between">
               <button
                 onClick={() => setStockFilter('all')}

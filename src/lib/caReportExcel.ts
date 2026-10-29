@@ -117,6 +117,23 @@ export function exportCaMasterExcelWorkbook(data: CaReportData) {
     ]);
   }
 
+  // GSTR-1 Table 13: Documents Issued During Tax Period (Rule 48)
+  if (data.docSummaryTable13 && data.docSummaryTable13.length > 0) {
+    summaryAoa.push([]);
+    summaryAoa.push(['GSTR-1 TABLE 13: DOCUMENTS ISSUED DURING THE TAX PERIOD (RULE 48)']);
+    summaryAoa.push(['Nature of Document', 'Sr. No. From', 'Sr. No. To', 'Total Number', 'Cancelled', 'Net Issued']);
+    data.docSummaryTable13.forEach(d => {
+      summaryAoa.push([
+        d.natureOfDocument,
+        d.fromSrNo,
+        d.toSrNo,
+        d.totalCount,
+        d.cancelledCount,
+        d.netIssuedCount
+      ]);
+    });
+  }
+
   // Audit notes
   if (data.validationNotes.length > 0) {
     summaryAoa.push([]);

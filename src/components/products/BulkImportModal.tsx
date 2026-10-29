@@ -89,10 +89,10 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'WebRajya_Stationery_Import_Template.csv';
+    a.download = 'WebRajya_Product_Import_Template.csv';
     a.click();
     URL.revokeObjectURL(url);
-    onToast('success', 'Template Downloaded', 'Sample stationery import CSV template generated.');
+    onToast('success', 'Template Downloaded', 'Sample product import CSV template generated.');
   };
 
   const handleRunValidation = () => {
@@ -205,7 +205,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                     <Download className="w-4 h-4 text-[#B45309]" /> Download Standard Template
                   </h4>
                   <p className="text-xs text-[#64748B] mt-1">
-                    Download our ready-to-use CSV template pre-formatted with standard stationery catalog columns.
+                    Download our ready-to-use CSV template pre-formatted with standard product catalog columns.
                   </p>
                   <button
                     type="button"

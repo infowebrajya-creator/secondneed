@@ -3,8 +3,9 @@ export type TaxType = 'inclusive' | 'exclusive';
 export type GstRate = 0 | 5 | 12 | 18 | 28;
 export type PaymentMode = 'cash' | 'upi' | 'card' | 'credit';
 export type InvoiceStatus = 'completed' | 'draft' | 'cancelled';
-export type InvoiceType = 'gst' | 'simple' | 'quotation';
+export type InvoiceType = 'gst' | 'bill_of_supply' | 'delivery_challan' | 'credit_note' | 'quotation' | 'simple';
 export type StockMovementType = 'sale' | 'purchase' | 'adjustment' | 'return';
+export type PrintCopyType = 'original' | 'duplicate' | 'triplicate';
 
 export interface Product {
   id: string;
@@ -84,6 +85,15 @@ export interface Invoice {
   balanceAmount: number;
   status: InvoiceStatus;
   isInterstate: boolean;
+  copyType?: PrintCopyType;
+  reverseCharge?: boolean;
+  placeOfSupply?: string;
+  placeOfSupplyCode?: string;
+  challanPurpose?: 'job_work' | 'godown_transfer' | 'approval' | 'others';
+  originalInvoiceId?: string;
+  originalInvoiceNumber?: string;
+  originalInvoiceDate?: string;
+  returnReason?: string;
   notes?: string;
   idempotencyKey?: string;
   upiReference?: string;
@@ -167,6 +177,15 @@ export interface PrintSettings {
   showBankDetails: boolean;
   showTerms: boolean;
   autoPrintOnSave: boolean;
+}
+
+export interface BillingSettings {
+  defaultInvoiceType: 'gst' | 'simple';
+  showAdvancedModes: boolean;
+  enableBos: boolean;
+  enableChallan: boolean;
+  enableEstimate: boolean;
+  enableIgst: boolean;
 }
 
 export interface SupabaseConfig {

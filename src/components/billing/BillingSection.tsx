@@ -21,7 +21,7 @@ import { useIsMobile } from '../../utils/useIsMobile';
 import { KeyboardBadge } from '../common/KeyboardBadge';
 import type { Product, Invoice, InvoiceType, Customer } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { triggerA5Print, triggerInvoicePrint } from '../../lib/print';
+import { triggerA5Print, triggerInvoicePrint, openWhatsAppReceipt } from '../../lib/print';
 import { getSupabaseClient } from '../../lib/supabase';
 import { useKeyboardShortcuts } from '../../utils/keyboard';
 import { playBeep, playError, playCashChime } from '../../utils/audio';
@@ -45,7 +45,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   const { products, isLoading: isCatalogLoading, loadProducts } = useProductStore();
   const { customers, findOrCreateCustomer } = useCustomerStore();
   const { createCompletedInvoice } = useSalesStore();
-  const { shopProfile, printSettings } = useSettingsStore();
+  const { shopProfile, printSettings, billingSettings } = useSettingsStore();
 
   const paperFormatLabel = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal'
     ? '80mm'
@@ -81,6 +81,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
   const [isNewBillModalOpen, setIsNewBillModalOpen] = useState(false);
   const [completedInvoice, setCompletedInvoice] = useState<Invoice | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [challanPurpose, setChallanPurpose] = useState<'job_work' | 'godown_transfer' | 'approval' | 'others'>('approval');
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const remarkInputRef = useRef<HTMLInputElement>(null);
@@ -390,7 +391,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
       onToast('info', 'Multiple Barcode Matches', `Barcode "${searchTerm}" matched multiple items. Please select from search picker.`);
       setIsProductPickerOpen(true);
     } else {
-      onToast('error', 'Product Not Found', `No stationery item found matching barcode/SKU "${searchTerm}".`);
+      onToast('error', 'Product Not Found', `No product found matching barcode/SKU "${searchTerm}".`);
     }
   };
 
@@ -444,6 +445,11 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
         paidAmount: receivedAmount,
         balanceAmount: Math.max(0, receivedAmount - totals.netPayable),
         isInterstate,
+        placeOfSupply: shopProfile?.state || 'Madhya Pradesh (23)',
+        placeOfSupplyCode: '23',
+        reverseCharge: false,
+        copyType: 'original',
+        challanPurpose: invoiceType === 'delivery_challan' ? challanPurpose : undefined,
         notes,
         idempotencyKey,
         transactionRef: upiRef,
@@ -468,6 +474,73 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
       }
     } catch (err: any) {
       onToast('error', 'Failed to Save Invoice', err.message || 'Server connection error. Cart preserved.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Fast 1-Tap Save Action for Mobile Bottom Bar (No Print, Save & Print, or WhatsApp Share)
+  const handleFastSaveBill = async ({ shouldPrint, shareWhatsApp }: { shouldPrint: boolean; shareWhatsApp?: boolean }) => {
+    if (isSubmitting) return;
+    if (items.length === 0) {
+      onToast('error', 'Empty Bill', 'Cannot save bill without items.');
+      return;
+    }
+    setIsSubmitting(true);
+
+    try {
+      const inv = await createCompletedInvoice({
+        customerName: customerName.trim() || 'Cash Customer',
+        customerMobile: customerMobile.trim() || '',
+        customerGstin: customerGstin.trim() || undefined,
+        customerAddress: customerAddress.trim() || undefined,
+        invoiceType,
+        items: items.map(item => isGstEnabled ? item : {
+          ...item,
+          taxableAmount: item.totalAmount,
+          cgstAmount: 0,
+          sgstAmount: 0,
+          igstAmount: 0
+        }),
+        subtotal: totals.subtotal,
+        totalDiscount: totals.totalDiscount,
+        totalGst: totals.totalGst,
+        cgstTotal: totals.cgstTotal,
+        sgstTotal: totals.sgstTotal,
+        igstTotal: totals.igstTotal,
+        freightAmount,
+        roundOff: totals.roundOff,
+        netPayable: totals.netPayable,
+        paymentMode: 'cash',
+        paidAmount: totals.netPayable,
+        balanceAmount: 0,
+        isInterstate,
+        placeOfSupply: shopProfile?.state || 'Madhya Pradesh (23)',
+        placeOfSupplyCode: '23',
+        reverseCharge: false,
+        copyType: 'original',
+        challanPurpose: invoiceType === 'delivery_challan' ? challanPurpose : undefined,
+        notes,
+        idempotencyKey,
+      }, shopProfile.invoicePrefix);
+
+      clearBill();
+      playCashChime();
+
+      if (shouldPrint) {
+        setCompletedInvoice(inv);
+        setIsPreviewOpen(true);
+        triggerInvoicePrint(inv, shopProfile, printSettings);
+        onToast('success', `Bill #${inv.invoiceNumber} Saved & Printed!`, `Total: ₹${inv.netPayable.toLocaleString('en-IN')}`);
+      } else if (shareWhatsApp) {
+        openWhatsAppReceipt(inv, shopProfile);
+        onToast('success', `Bill #${inv.invoiceNumber} Saved & Shared!`, 'WhatsApp opened with bill');
+      } else {
+        onToast('success', `Bill #${inv.invoiceNumber} Saved!`, `Net Payable: ₹${inv.netPayable.toLocaleString('en-IN')}`);
+      }
+    } catch (err: any) {
+      playError();
+      onToast('error', 'Failed to Save Invoice', err.message || 'Cart preserved.');
     } finally {
       setIsSubmitting(false);
     }
@@ -552,6 +625,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
           onToast={onToast}
           onOpenQuickPay={() => setIsQuickPayOpen(true)}
           onOpenNewBill={handleOpenNewBill}
+          onFastSaveBill={handleFastSaveBill}
           totals={totals}
           isOnline={isOnline}
           isSupabaseConnected={isSupabaseConnected}
@@ -781,7 +855,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
             <button
               type="button"
               onClick={() => setInvoiceType('gst')}
-              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${
                 invoiceType === 'gst' ? 'bg-[#15803D] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
               }`}
               title="GST Tax Invoice (CGST + SGST or IGST)"
@@ -791,26 +865,79 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
             <button
               type="button"
               onClick={() => setInvoiceType('simple')}
-              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded transition-colors cursor-pointer ${
                 invoiceType === 'simple' ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
               }`}
               title="Simple Retail Cash Memo"
             >
               Simple
             </button>
-            <button
-              type="button"
-              onClick={() => setInvoiceType('quotation')}
-              className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                invoiceType === 'quotation' ? 'bg-[#D97706] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
-              }`}
-              title="Formal Price Quotation / Institutional Estimate"
-            >
-              Estimate
-            </button>
+
+            {/* Advanced statutory modes: Only displayed when enabled in Settings */}
+            {billingSettings?.showAdvancedModes && (
+              <>
+                {billingSettings.enableBos && (
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceType('bill_of_supply')}
+                    className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                      invoiceType === 'bill_of_supply' ? 'bg-[#0284C7] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+                    }`}
+                    title="Bill of Supply (Rule 49 - Composition Scheme / Exempt Supplies)"
+                  >
+                    B.O.S
+                  </button>
+                )}
+                {billingSettings.enableChallan && (
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceType('delivery_challan')}
+                    className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                      invoiceType === 'delivery_challan' ? 'bg-[#7C3AED] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+                    }`}
+                    title="Delivery Challan (Rule 55 - Job Work / Stock Transfer without Sale)"
+                  >
+                    Challan
+                  </button>
+                )}
+                {billingSettings.enableEstimate && (
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceType('quotation')}
+                    className={`px-2 py-1 rounded transition-colors cursor-pointer ${
+                      invoiceType === 'quotation' ? 'bg-[#D97706] text-white shadow-xs' : 'text-[#64748B] hover:text-[#172B4D]'
+                    }`}
+                    title="Formal Price Quotation / Institutional Estimate"
+                  >
+                    Estimate
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* If currently set to an advanced mode not displayed, show an indicator badge */}
+            {!billingSettings?.showAdvancedModes && invoiceType !== 'gst' && invoiceType !== 'simple' && (
+              <span className="px-2 py-1 rounded bg-[#E0E7FF] text-[#3730A3] text-[10px] font-bold">
+                {invoiceType === 'bill_of_supply' ? 'B.O.S' : invoiceType === 'delivery_challan' ? 'Challan' : 'Estimate'}
+              </span>
+            )}
           </div>
 
-          {isGstEnabled && (
+          {invoiceType === 'delivery_challan' && (
+            <select
+              value={challanPurpose}
+              onChange={(e) => setChallanPurpose(e.target.value as any)}
+              className="text-[10px] font-bold bg-purple-50 text-purple-900 border border-purple-300 rounded px-1.5 py-1 focus:outline-none cursor-pointer"
+              title="Rule 55 Challan Statutory Purpose"
+            >
+              <option value="approval">Supply on Approval</option>
+              <option value="job_work">Job Work</option>
+              <option value="godown_transfer">Godown Transfer</option>
+              <option value="others">Other Transportation</option>
+            </select>
+          )}
+
+          {isGstEnabled && (billingSettings?.enableIgst !== false) && (
             <label className="flex items-center gap-1 text-[11px] text-[#172B4D] font-bold cursor-pointer select-none shrink-0" title="Interstate IGST">
               <input
                 type="checkbox"
@@ -860,7 +987,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
               <div className="px-5 py-3 bg-[#123B70] text-white text-xs font-extrabold uppercase tracking-wider flex justify-between items-center rounded-t-xl sticky top-0 z-10 shadow-sm border-b border-[#0D2D56]">
                 <span className="flex items-center gap-2.5 text-sm">
                   <Search className="w-4 h-4 text-[#60A5FA]" />
-                  Matching Stationery Products ({matchingProducts.length})
+                  Matching Products ({matchingProducts.length})
                 </span>
                 <span className="text-xs text-blue-200 font-mono font-bold bg-white/10 px-3 py-1 rounded-md border border-white/10">
                   Use ↑↓ Arrow Keys & Press Enter to Select
@@ -1067,7 +1194,7 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
                       <div className="w-16 h-16 rounded-2xl bg-white border border-[#D8E1EC] p-2 mx-auto mb-3 shadow-xs flex items-center justify-center">
                         <img src="/logo.png" alt="WebRajya Invoice" className="w-full h-full object-contain" />
                       </div>
-                      <div className="font-bold text-base text-[#172B4D]">No stationery items in bill</div>
+                      <div className="font-bold text-base text-[#172B4D]">No items in bill</div>
                       <div className="text-sm text-[#64748B] mt-1">Scan barcode or press F4 to search product catalog</div>
                     </td>
                   </tr>
@@ -1310,35 +1437,6 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
                     </div>
                   </div>
                 </div>
-
-                {/* Quick % shortcut buttons */}
-                <div className="flex items-center justify-end gap-1">
-                  <span className="text-[10px] text-[#94A3B8] mr-0.5">Quick:</span>
-                  {[2, 3, 5, 10].map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => handleBillDiscountPctChange(p)}
-                      className={`px-1.5 py-0.5 text-[10px] font-bold font-mono rounded transition-colors cursor-pointer border ${
-                        billDiscountPct === p
-                          ? 'bg-[#15803D] text-white border-[#15803D]'
-                          : 'bg-white hover:bg-[#F0FDF4] hover:text-[#15803D] text-[#475569] border-[#CBD5E1]'
-                      }`}
-                    >
-                      {p}%
-                    </button>
-                  ))}
-                  {billDiscountPct > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleBillDiscountPctChange(0)}
-                      className="px-1.5 py-0.5 text-[10px] font-bold text-[#EF4444] hover:bg-red-50 rounded border border-red-200 transition-colors cursor-pointer"
-                      title="Clear discount"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
               </div>
 
               <div className="flex justify-between items-center text-[#475569] pt-1 border-t border-dashed border-[#CBD5E1]">
@@ -1346,6 +1444,16 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
                 <span className="text-[#0F172A] font-mono font-bold text-sm">{totals.roundOff >= 0 ? '+' : ''}₹{totals.roundOff.toFixed(2)}</span>
               </div>
             </div>
+
+            {/* Rule 46(e) Statutory B2C Alert for Bills >= ₹50,000 */}
+            {totals.netPayable >= 50000 && !customerGstin && (!customerAddress || !customerName || customerName.trim().toLowerCase() === 'cash customer') && (
+              <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs my-2 flex items-start gap-2 shadow-2xs">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-tight">
+                  <span className="font-bold">GST Rule 46(e) Compliance Alert:</span> For unregistered supplies of ₹50,000 or more, recording Customer Name, Delivery Address, and State is mandatory on the Tax Invoice.
+                </div>
+              </div>
+            )}
 
             {/* Grand Net Payable Highlight */}
             <div className="p-4 bg-[#DBEAFE] border-2 border-[#93C5FD] rounded-xl text-center my-3 shadow-xs">

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
   Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor,
-  Volume2, VolumeX, Bluetooth
+  Volume2, VolumeX, Bluetooth, ShoppingBag
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
 import { ShopProfileSchema } from '../../utils/validation';
-import { PaperSize, PrintEngine } from '../../types';
+import { PaperSize, PrintEngine, BillingSettings } from '../../types';
 import { PwaInstallModal } from '../common/PwaInstallModal';
 import { WINDOWS_EXE_URL } from '../../utils/constants';
 import { usePwaInstall } from '../../utils/usePwaInstall';
@@ -32,8 +32,8 @@ interface SettingsSectionProps {
 
 export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => {
   const { 
-    shopProfile, printSettings, supabaseConfig, isLoading, isTestingConnection,
-    loadSettings, saveShopProfile, savePrintSettings, saveSupabaseConfig, testConnection, exportBackupJSON, importBackupJSON, clearAllDemoData
+    shopProfile, printSettings, billingSettings, supabaseConfig, isLoading, isTestingConnection,
+    loadSettings, saveShopProfile, savePrintSettings, saveBillingSettings, saveSupabaseConfig, testConnection, exportBackupJSON, importBackupJSON, clearAllDemoData
   } = useSettingsStore();
 
   const { loadProducts } = useProductStore();
@@ -42,7 +42,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   const { syncWithSupabase: syncProducts } = useProductStore();
   const { syncInvoicesWithSupabase: syncInvoices } = useSalesStore();
 
-  const [activeTab, setActiveTab] = useState<'shop' | 'print' | 'backup' | 'sound'>('shop');
+  const [activeTab, setActiveTab] = useState<'shop' | 'billing' | 'print' | 'backup' | 'sound'>('shop');
   const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(() => 
     typeof window !== 'undefined' ? localStorage.getItem('webrajya_last_backup_date') : null
@@ -51,11 +51,23 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   // Local form states
   const [profileForm, setProfileForm] = useState(shopProfile);
   const [printForm, setPrintForm] = useState(printSettings);
+  const [billingForm, setBillingForm] = useState(billingSettings);
   const [supaForm, setSupaForm] = useState(supabaseConfig);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setBillingForm(billingSettings);
+  }, [billingSettings]);
+
+  const handleToggleBillingSetting = async (key: keyof BillingSettings, value: any) => {
+    const updated = { ...billingForm, [key]: value };
+    setBillingForm(updated);
+    await saveBillingSettings(updated);
+    onToast('success', 'Setting Saved', 'Invoice & billing mode configuration updated.');
+  };
 
   const { hasNativePrompt, isInstalled, isStandalone, isIos, promptInstall } = usePwaInstall();
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -413,6 +425,13 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('billing')}
+            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'billing' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
+          >
+            Invoice & Tax Modes
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('print')}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors cursor-pointer shrink-0 ${activeTab === 'print' ? 'bg-[#2563EB] text-white shadow-xs font-bold' : 'text-[#64748B] hover:text-[#172B4D]'}`}
           >
@@ -522,7 +541,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#D8E1EC] pb-2">
               <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider">
-                Stationery Shop Details & Invoice Header
+                Retail Shop Details & Invoice Header
               </h3>
               <div className="flex items-center gap-1.5">
                 {saveStatus === 'saving' && (
@@ -616,7 +635,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   onChange={(e) => handleProfileChange('upiId', e.target.value)}
                   onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
-                  placeholder="e.g. webrajyastationery@sbi"
+                  placeholder="e.g. yourshop@upi or 9876543210@paytm"
                 />
               </div>
 
@@ -667,6 +686,200 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </span>
             </div>
           </form>
+        )}
+
+        {activeTab === 'billing' && (
+          <div className="max-w-3xl space-y-6">
+            <div>
+              <div className="flex items-center justify-between border-b border-[#D8E1EC] pb-2 mb-3">
+                <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider">
+                  Default Counter Document Mode
+                </h3>
+                <span className="flex items-center gap-1 text-[11px] font-bold text-[#15803D] bg-[#F0FDF4] border border-[#BBF7D0] px-2.5 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" /> Auto-saved
+                </span>
+              </div>
+              <p className="text-xs text-[#64748B] mb-3">
+                Choose the primary document mode pre-selected every time you open the billing counter.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* GST Tax Invoice Card */}
+                <div
+                  onClick={() => handleToggleBillingSetting('defaultInvoiceType', 'gst')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    billingForm.defaultInvoiceType === 'gst'
+                      ? 'border-[#15803D] bg-[#F0FDF4] shadow-xs ring-2 ring-[#15803D]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Receipt className={`w-5 h-5 ${billingForm.defaultInvoiceType === 'gst' ? 'text-[#15803D]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-sm text-[#0F172A]">GST Tax Invoice (Rule 46)</span>
+                      </div>
+                      {billingForm.defaultInvoiceType === 'gst' && (
+                        <CheckCircle2 className="w-5 h-5 text-[#15803D]" />
+                      )}
+                    </div>
+                    <p className="text-xs text-[#475569] leading-relaxed">
+                      Official tax bill with CGST + SGST or IGST tax calculations, HSN summaries, and GSTR-1 compliance.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Simple Retail Cash Memo Card */}
+                <div
+                  onClick={() => handleToggleBillingSetting('defaultInvoiceType', 'simple')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    billingForm.defaultInvoiceType === 'simple'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <ShoppingBag className={`w-5 h-5 ${billingForm.defaultInvoiceType === 'simple' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-sm text-[#0F172A]">Simple Retail Cash Memo</span>
+                      </div>
+                      {billingForm.defaultInvoiceType === 'simple' && (
+                        <CheckCircle2 className="w-5 h-5 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <p className="text-xs text-[#475569] leading-relaxed">
+                      Clean and fast retail cash memo without GST percentages or HSN clutter. Ideal for fast counter walk-ins.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Counter Document Display Settings */}
+            <div>
+              <div className="border-b border-[#D8E1EC] pb-2 mb-3">
+                <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider">
+                  Counter Toolbar Display & Specialized Modes
+                </h3>
+              </div>
+              <p className="text-xs text-[#64748B] mb-3">
+                Keep the counter clean with only <b>GST</b> and <b>Simple</b>, or enable specialized statutory documents as needed.
+              </p>
+
+              <div className="space-y-3">
+                {/* Master Switch: Show Advanced Document Types */}
+                <div className="p-3.5 bg-white border border-[#D8E1EC] rounded-xl flex items-center justify-between shadow-2xs">
+                  <div>
+                    <div className="text-xs font-bold text-[#172B4D]">
+                      Show Advanced Document Types at Counter
+                    </div>
+                    <div className="text-[11px] text-[#64748B]">
+                      When disabled, the counter bar cleanly shows only <b>GST</b> and <b>Simple</b> buttons.
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={billingForm.showAdvancedModes}
+                      onChange={(e) => handleToggleBillingSetting('showAdvancedModes', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2563EB]"></div>
+                  </label>
+                </div>
+
+                {/* Sub-options when enabled */}
+                {billingForm.showAdvancedModes && (
+                  <div className="ml-4 pl-4 border-l-2 border-[#BFDBFE] space-y-2.5">
+                    {/* B.O.S */}
+                    <div className="p-3 bg-white border border-[#D8E1EC] rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-bold text-[#172B4D]">
+                          Bill of Supply (B.O.S - CGST Rule 49)
+                        </div>
+                        <div className="text-[11px] text-[#64748B]">
+                          For GST Composition Scheme dealers and 100% tax-exempt supplies.
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={billingForm.enableBos}
+                          onChange={(e) => handleToggleBillingSetting('enableBos', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0284C7]"></div>
+                      </label>
+                    </div>
+
+                    {/* Delivery Challan */}
+                    <div className="p-3 bg-white border border-[#D8E1EC] rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-bold text-[#172B4D]">
+                          Delivery Challan (CGST Rule 55)
+                        </div>
+                        <div className="text-[11px] text-[#64748B]">
+                          For Goods on Approval, Godown/Branch Transfers, or Job Work without sale.
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={billingForm.enableChallan}
+                          onChange={(e) => handleToggleBillingSetting('enableChallan', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#7C3AED]"></div>
+                      </label>
+                    </div>
+
+                    {/* Quotation / Estimate */}
+                    <div className="p-3 bg-white border border-[#D8E1EC] rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-bold text-[#172B4D]">
+                          Quotation / Price Estimate
+                        </div>
+                        <div className="text-[11px] text-[#64748B]">
+                          Formal cost quotation without deducting inventory or recording sales revenue.
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={billingForm.enableEstimate}
+                          onChange={(e) => handleToggleBillingSetting('enableEstimate', e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#D97706]"></div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Interstate IGST Toggle */}
+                <div className="p-3.5 bg-white border border-[#D8E1EC] rounded-xl flex items-center justify-between shadow-2xs">
+                  <div>
+                    <div className="text-xs font-bold text-[#172B4D]">
+                      Allow Interstate IGST Billing Checkbox
+                    </div>
+                    <div className="text-[11px] text-[#64748B]">
+                      Shows the "IGST" checkbox on the counter for out-of-state customer sales.
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={billingForm.enableIgst}
+                      onChange={(e) => handleToggleBillingSetting('enableIgst', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2563EB]"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {activeTab === 'print' && (
@@ -731,10 +944,10 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                       )}
                     </div>
                     <span className="inline-block px-2 py-0.5 text-[10px] font-bold bg-[#E0E7FF] text-[#3730A3] rounded mb-2">
-                      Standard Stationery
+                      Standard Retail
                     </span>
                     <p className="text-xs text-[#475569] leading-relaxed">
-                      Standard wholesale A5 stationery format. Includes full item breakdown, HSN codes, Scheme discounts, and bank details.
+                      Standard wholesale A5 retail format. Includes full item breakdown, HSN codes, Scheme discounts, and bank details.
                     </p>
                   </div>
                   <div className="mt-4 pt-2 border-t border-[#D8E1EC]/60 text-[10px] font-mono font-bold text-[#64748B]">

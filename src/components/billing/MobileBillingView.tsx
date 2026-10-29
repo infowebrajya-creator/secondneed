@@ -2,9 +2,11 @@ import React, { useState, useRef, useMemo } from 'react';
 import { 
   Search, Plus, Minus, Trash2, ShoppingBag, User, Phone, FileText, StickyNote,
   CheckCircle2, ChevronDown, ChevronUp, X, Sparkles, Wifi, WifiOff, ArrowRight,
-  Camera, Gift, Percent, Bookmark, Mic, MicOff, LayoutGrid, Zap, Check
+  Camera, Gift, Percent, Bookmark, Mic, MicOff, LayoutGrid, Zap, Check,
+  Save, Printer, MessageSquare
 } from 'lucide-react';
 import { useBillingStore } from '../../store/useBillingStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore, STATIONERY_CATEGORIES } from '../../store/useProductStore';
 import { useCustomerStore } from '../../store/useCustomerStore';
 import { formatCurrency } from '../../utils/formatters';
@@ -18,6 +20,7 @@ interface MobileBillingViewProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
   onOpenQuickPay: () => void;
   onOpenNewBill: () => void;
+  onFastSaveBill?: (options: { shouldPrint: boolean; shareWhatsApp?: boolean }) => Promise<void>;
   totals: {
     subtotal: number;
     grossPayable?: number;
@@ -37,6 +40,7 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
   onToast,
   onOpenQuickPay,
   onOpenNewBill,
+  onFastSaveBill,
   totals,
   isOnline,
   isSupabaseConnected
@@ -52,6 +56,7 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
 
   const { products } = useProductStore();
   const { customers, findOrCreateCustomer } = useCustomerStore();
+  const { billingSettings } = useSettingsStore();
 
   // Search, View Mode & Modals
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +72,12 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isGstEnabled = invoiceType === 'gst';
+
+  // Check if customer mobile number is valid (>= 10 digits)
+  const hasValidMobile = useMemo(() => {
+    const digits = (customerMobile || '').replace(/\D/g, '');
+    return digits.length >= 10;
+  }, [customerMobile]);
 
   // Fast Mover SKUs (most popular stationery counter items)
   const FAST_MOVER_SKUS = [
@@ -226,12 +237,12 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
       {/* 1. TOP MOBILE HEADER: GST Toggle, Status, New Bill */}
       <div className="flex items-center justify-between bg-white border border-[#D8E1EC] rounded-xl px-3 py-2 shadow-xs mb-2.5">
         <div className="flex items-center gap-2">
-          {/* Bill Type 3-Way Pill */}
+          {/* Bill Type 2-Way Pill */}
           <div className="inline-flex bg-[#F1F5F9] border border-[#CBD5E1] p-0.5 rounded-full text-[10px] font-black shrink-0">
             <button
               type="button"
               onClick={() => setInvoiceType('gst')}
-              className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-full transition-colors cursor-pointer ${
                 invoiceType === 'gst' ? 'bg-[#15803D] text-white shadow-xs' : 'text-[#64748B]'
               }`}
             >
@@ -240,24 +251,26 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
             <button
               type="button"
               onClick={() => setInvoiceType('simple')}
-              className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded-full transition-colors cursor-pointer ${
                 invoiceType === 'simple' ? 'bg-[#2563EB] text-white shadow-xs' : 'text-[#64748B]'
               }`}
             >
               Simple
             </button>
-            <button
-              type="button"
-              onClick={() => setInvoiceType('quotation')}
-              className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
-                invoiceType === 'quotation' ? 'bg-[#D97706] text-white shadow-xs' : 'text-[#64748B]'
-              }`}
-            >
-              Estimate
-            </button>
+            {billingSettings?.showAdvancedModes && billingSettings?.enableEstimate && (
+              <button
+                type="button"
+                onClick={() => setInvoiceType('quotation')}
+                className={`px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+                  invoiceType === 'quotation' ? 'bg-[#D97706] text-white shadow-xs' : 'text-[#64748B]'
+                }`}
+              >
+                Estimate
+              </button>
+            )}
           </div>
 
-          {isGstEnabled && (
+          {isGstEnabled && (billingSettings?.enableIgst !== false) && (
             <label className="flex items-center gap-1 text-[10px] font-bold text-[#172B4D]">
               <input
                 type="checkbox"
@@ -399,15 +412,15 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
 
       {/* 3. PROMINENT PRODUCT SEARCH BAR + VOICE + CAMERA SCAN BUTTON (MOBILE) */}
       <div className="relative mb-2.5">
-        <div className="relative flex items-center bg-white border-2 border-[#BFDBFE] rounded-xl shadow-xs overflow-hidden focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-[#2563EB]/20">
-          <Search className="w-4 h-4 text-[#2563EB] ml-3 shrink-0" />
+        <div className="relative flex items-center bg-white border-2 border-[#BFDBFE] rounded-xl shadow-xs p-1 focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-[#2563EB]/20">
+          <Search className="w-4 h-4 text-[#2563EB] ml-2.5 shrink-0" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search stationery, barcode or SKU..."
-            className="w-full py-2.5 px-2.5 text-xs font-semibold text-[#172B4D] placeholder-[#94A3B8] focus:outline-none"
+            placeholder="Search products, barcode or SKU..."
+            className="w-full min-w-0 py-2 px-2 text-xs font-semibold text-[#172B4D] placeholder-[#94A3B8] focus:outline-none"
           />
           {searchQuery ? (
             <button
@@ -428,7 +441,7 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
                 ? 'bg-red-100 text-red-600 animate-pulse'
                 : 'text-[#64748B] hover:text-[#2563EB] active:scale-95'
             }`}
-            title="Voice search stationery"
+            title="Voice search products"
           >
             {isListening ? <MicOff className="w-4 h-4 text-red-600" /> : <Mic className="w-4 h-4" />}
           </button>
@@ -437,11 +450,11 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
           <button
             type="button"
             onClick={() => setIsCameraScannerOpen(true)}
-            className="mr-1.5 px-2.5 py-1.5 bg-[#DCFCE7] hover:bg-[#BBF7D0] active:scale-95 text-[#15803D] border border-[#86EFAC] rounded-lg text-xs font-extrabold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-2xs"
+            className="px-3 sm:px-3.5 py-1.5 bg-[#DCFCE7] hover:bg-[#BBF7D0] active:scale-95 text-[#15803D] border border-[#86EFAC] rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-2xs"
             title="Scan barcode with phone camera"
           >
             <Camera className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span className="text-[11px]">Scan</span>
+            <span className="text-[11px] font-black tracking-wide">Scan Barcode</span>
           </button>
         </div>
 
@@ -450,7 +463,7 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
           <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[#D8E1EC] rounded-xl shadow-xl z-30 max-h-72 overflow-y-auto divide-y divide-gray-100 animate-in fade-in duration-100">
             {matchingProducts.length === 0 ? (
               <div className="p-4 text-center text-xs text-[#64748B]">
-                No stationery items found for "{searchQuery}"
+                No products found for "{searchQuery}"
               </div>
             ) : (
               matchingProducts.map((prod) => (
@@ -826,34 +839,86 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
       )}
 
       {/* 5. FIXED BOTTOM CHECKOUT BAR (MOBILE ONLY) */}
-      <div className="fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#D8E1EC] px-3.5 py-2.5 shadow-2xl flex items-center justify-between safe-area-mb">
+      <div className="fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#D8E1EC] px-3 py-2 shadow-2xl flex items-center justify-between safe-area-mb gap-2">
         {/* Left: Total & Breakdown trigger */}
         <div 
           onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
-          className="cursor-pointer"
+          className="cursor-pointer shrink-0 min-w-0"
         >
-          <div className="text-[11px] text-[#64748B] flex items-center gap-1 font-semibold">
+          <div className="text-[10px] text-[#64748B] flex items-center gap-1 font-semibold truncate">
             <span>{items.length} item(s)</span>
-            <span className="text-[#2563EB] text-[10px] underline">Details</span>
+            <span className="text-[#2563EB] text-[9px] underline">Details</span>
           </div>
-          <div className="text-lg font-black text-[#123B70] font-mono leading-tight">
+          <div className="text-base sm:text-lg font-black text-[#123B70] font-mono leading-tight">
             {formatCurrency(totals.netPayable)}
           </div>
         </div>
 
-        {/* Right: Settle Button */}
-        <button
-          type="button"
-          disabled={items.length === 0}
-          onClick={() => {
-            triggerHaptic(30);
-            onOpenQuickPay();
-          }}
-          className="px-5 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-md active:scale-95 transition-all cursor-pointer"
-        >
-          <span>Settle Bill</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        {/* Right: Actions Cluster (Square Action Buttons + Settle Bill) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Button 1: Save (No Print) */}
+          <button
+            type="button"
+            disabled={items.length === 0}
+            onClick={() => {
+              triggerHaptic(20);
+              onFastSaveBill?.({ shouldPrint: false });
+            }}
+            className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 text-emerald-700 border border-emerald-300 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs"
+            title="Save Bill (No Print)"
+            aria-label="Save Bill No Print"
+          >
+            <Save className="w-4 h-4 text-emerald-700" />
+          </button>
+
+          {/* Button 2: Save & Print */}
+          <button
+            type="button"
+            disabled={items.length === 0}
+            onClick={() => {
+              triggerHaptic(20);
+              onFastSaveBill?.({ shouldPrint: true });
+            }}
+            className="w-9 h-9 sm:w-10 sm:h-10 bg-amber-50 hover:bg-amber-100 disabled:opacity-40 text-amber-700 border border-amber-300 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs"
+            title="Save & Print Bill"
+            aria-label="Save and Print Bill"
+          >
+            <Printer className="w-4 h-4 text-amber-700" />
+          </button>
+
+          {/* Button 3: WhatsApp Share (Enabled ONLY when customer mobile has >= 10 digits) */}
+          <button
+            type="button"
+            disabled={items.length === 0 || !hasValidMobile}
+            onClick={() => {
+              triggerHaptic(20);
+              onFastSaveBill?.({ shouldPrint: false, shareWhatsApp: true });
+            }}
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all shadow-2xs ${
+              hasValidMobile && items.length > 0
+                ? 'bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] border border-[#25D366]/50 cursor-pointer active:scale-95'
+                : 'bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed opacity-50'
+            }`}
+            title={hasValidMobile ? `Save & Send Bill to ${customerMobile} on WhatsApp` : 'Enter customer mobile number to enable WhatsApp bill share'}
+            aria-label="Save and Share on WhatsApp"
+          >
+            <MessageSquare className="w-4 h-4" />
+          </button>
+
+          {/* Settle Bill Button */}
+          <button
+            type="button"
+            disabled={items.length === 0}
+            onClick={() => {
+              triggerHaptic(30);
+              onOpenQuickPay();
+            }}
+            className="px-3.5 sm:px-4 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+          >
+            <span className="whitespace-nowrap">Settle Bill</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
 
@@ -953,41 +1018,6 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
                       />
                     </div>
                   </div>
-                </div>
-
-                {/* Quick % buttons */}
-                <div className="flex items-center justify-end gap-1">
-                  <span className="text-[10px] text-[#94A3B8] mr-0.5">Quick:</span>
-                  {[2, 3, 5, 10].map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        setBillDiscountPct(p);
-                        const base = isGstEnabled ? (totals.grossPayable || totals.subtotal) : totals.subtotal;
-                        setBillDiscountAmount(base > 0 ? Math.round(((base * p) / 100) * 100) / 100 : 0);
-                      }}
-                      className={`px-1.5 py-0.5 text-[10px] font-bold font-mono rounded transition-colors cursor-pointer border ${
-                        billDiscountPct === p
-                          ? 'bg-[#15803D] text-white border-[#15803D]'
-                          : 'bg-white hover:bg-[#F0FDF4] hover:text-[#15803D] text-[#475569] border-[#CBD5E1]'
-                      }`}
-                    >
-                      {p}%
-                    </button>
-                  ))}
-                  {billDiscountPct > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBillDiscountPct(0);
-                        setBillDiscountAmount(0);
-                      }}
-                      className="px-1.5 py-0.5 text-[10px] font-bold text-[#EF4444] hover:bg-red-50 rounded border border-red-200 transition-colors cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
               </div>
 

@@ -310,7 +310,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
   const handleSeed = async () => {
     const count = await seedDefaultProducts();
-    onToast('success', 'Stationery Catalog Seeded', `Added ${count} popular stationery products to catalog.`);
+    onToast('success', 'Catalog Seeded', `Added ${count} popular retail products to catalog.`);
   };
 
   const handleStockAdjustSubmit = async (e: React.FormEvent) => {
@@ -376,7 +376,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between bg-white border border-[#D8E1EC] rounded-xl p-3 sm:p-4 shadow-sm shrink-0 gap-3">
         <div>
           <h2 className="text-base font-extrabold text-[#172B4D] flex items-center gap-2">
-            <Package className="w-5 h-5 text-[#2563EB]" /> Products & Stationery Catalog ({products.length} Items)
+            <Package className="w-5 h-5 text-[#2563EB]" /> Products & Retail Catalog ({products.length} Items)
           </h2>
           <p className="text-xs text-[#64748B] mt-0.5">Manage SKU codes, barcodes, MRP/rates, GST slabs, and bulk import spreadsheets</p>
         </div>
@@ -541,9 +541,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           {filteredProducts.length === 0 ? (
             <div className="bg-white border border-[#D8E1EC] rounded-2xl p-8 text-center text-[#64748B] shadow-xs">
               <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
-              <div className="font-bold text-[#172B4D]">No stationery products found</div>
+              <div className="font-bold text-[#172B4D]">No products found</div>
               <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">
-                Seed Default Stationery Items
+                Seed Sample Catalog Items
               </button>
             </div>
           ) : (
@@ -686,7 +686,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                     <td colSpan={11} className="py-16 text-center text-[#64748B]">
                       <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
                       <div className="font-bold text-[#172B4D]">No products found matching criteria</div>
-                      <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">Seed Default Stationery Items</button>
+                      <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">Seed Sample Catalog Items</button>
                     </td>
                   </tr>
                 ) : (
@@ -836,7 +836,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       <Modal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); onCloseExternalModal?.(); }}
-        title={editingProduct ? 'Edit Product Details' : 'Add New Stationery Product'}
+        title={editingProduct ? 'Edit Product Details' : 'Add New Product'}
         subtitle="Specify SKU, barcode, MRP, rates, GST tax slab & stock alert level"
         maxWidth="2xl"
       >

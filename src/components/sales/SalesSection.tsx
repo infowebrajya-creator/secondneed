@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Receipt, Search, Printer, Eye, XCircle, Download, RefreshCw, Trash2, Share2, FileCheck 
+  Receipt, Search, Printer, Eye, XCircle, Download, RefreshCw, Trash2, Share2, FileCheck, RotateCcw 
 } from 'lucide-react';
 import { useSalesStore } from '../../store/useSalesStore';
 import { useProductStore } from '../../store/useProductStore';
@@ -17,6 +17,8 @@ import {
   exportPaymentsCSV, exportStockMovementsCSV 
 } from '../../lib/exportProcessor';
 import { ShareReportsModal } from '../caReports/ShareReportsModal';
+import { A5PrintPreviewModal } from '../billing/A5PrintPreviewModal';
+import { CreditNoteModal } from './CreditNoteModal';
 
 interface SalesSectionProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
@@ -47,6 +49,10 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
   const [isSubmittingReversal, setIsSubmittingReversal] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isShareReportsModalOpen, setIsShareReportsModalOpen] = useState(false);
+  const [isCreditNoteModalOpen, setIsCreditNoteModalOpen] = useState(false);
+  const [creditNoteTargetInvoice, setCreditNoteTargetInvoice] = useState<Invoice | null>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
 
   const handleSyncSupabase = async () => {
     setIsSyncing(true);
@@ -197,9 +203,19 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
   };
 
   const handleReprintA5 = (inv: Invoice) => {
-    triggerA5Print(inv, shopProfile, printSettings);
-    const size = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm Receipt' : 'A5 Invoice';
-    onToast('info', `Printing ${size}`, `Triggered print for #${inv.invoiceNumber}`);
+    setPreviewInvoice(inv);
+    setIsPreviewModalOpen(true);
+  };
+
+  const handleOpenCreditNote = (inv: Invoice) => {
+    setCreditNoteTargetInvoice(inv);
+    setIsCreditNoteModalOpen(true);
+  };
+
+  const handleCreditNoteSuccess = (cn: Invoice) => {
+    setIsDetailModalOpen(false);
+    setPreviewInvoice(cn);
+    setIsPreviewModalOpen(true);
   };
 
   const handleOpenReversal = (inv: Invoice) => {
@@ -410,6 +426,9 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
             {([
               { id: 'all', label: 'All Types' },
               { id: 'gst', label: 'GST Tax' },
+              { id: 'bill_of_supply', label: 'Bill of Supply' },
+              { id: 'delivery_challan', label: 'Challan' },
+              { id: 'credit_note', label: 'Credit Note' },
               { id: 'simple', label: 'Simple' },
               { id: 'quotation', label: 'Quotations' }
             ] as const).map((bt) => {
@@ -460,11 +479,17 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
                       <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
                         inv.invoiceType === 'gst'
                           ? 'bg-[#DBEAFE] text-[#123B70]'
+                          : inv.invoiceType === 'credit_note'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : inv.invoiceType === 'bill_of_supply'
+                          ? 'bg-purple-100 text-purple-800'
+                          : inv.invoiceType === 'delivery_challan'
+                          ? 'bg-orange-100 text-orange-800'
                           : inv.invoiceType === 'quotation'
                           ? 'bg-amber-100 text-amber-800 border border-amber-300'
                           : 'bg-gray-100 text-gray-700'
                       }`}>
-                        {inv.invoiceType === 'gst' ? 'GST' : inv.invoiceType === 'quotation' ? 'Quotation' : 'Simple'}
+                        {inv.invoiceType === 'gst' ? 'GST' : inv.invoiceType === 'credit_note' ? 'Credit Note' : inv.invoiceType === 'bill_of_supply' ? 'B.O.S' : inv.invoiceType === 'delivery_challan' ? 'Challan' : inv.invoiceType === 'quotation' ? 'Quotation' : 'Simple'}
                       </span>
                     </div>
                     <div className="text-[11px] text-[#64748B] font-mono mt-0.5">
@@ -609,11 +634,17 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
                       <span className={`px-2 py-0.5 rounded font-bold ${
                         inv.invoiceType === 'gst'
                           ? 'bg-[#DBEAFE] text-[#123B70] border border-[#BFDBFE]'
+                          : inv.invoiceType === 'credit_note'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : inv.invoiceType === 'bill_of_supply'
+                          ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                          : inv.invoiceType === 'delivery_challan'
+                          ? 'bg-orange-100 text-orange-800 border border-orange-200'
                           : inv.invoiceType === 'quotation'
                           ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]'
                           : 'bg-[#F1F5F9] text-[#64748B] border border-[#D8E1EC]'
                       }`}>
-                        {inv.invoiceType === 'gst' ? 'GST' : inv.invoiceType === 'quotation' ? 'QUOTATION' : 'SIMPLE'}
+                        {inv.invoiceType === 'gst' ? 'GST' : inv.invoiceType === 'credit_note' ? 'CREDIT NOTE' : inv.invoiceType === 'bill_of_supply' ? 'B.O.S' : inv.invoiceType === 'delivery_challan' ? 'CHALLAN' : inv.invoiceType === 'quotation' ? 'QUOTATION' : 'SIMPLE'}
                       </span>
                     </td>
                     <td className="p-3 font-mono text-[#64748B]">{formatDate(inv.date)} {inv.time}</td>
@@ -719,10 +750,31 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
               </div>
               <div>
                 <div>Date & Time: <span className="text-[#172B4D]">{selectedInvoice.date} {selectedInvoice.time}</span></div>
-                <div>Document Type: <strong className={`uppercase ${selectedInvoice.invoiceType === 'quotation' ? 'text-amber-600' : 'text-[#2563EB]'}`}>{selectedInvoice.invoiceType === 'gst' ? 'GST Tax Invoice' : selectedInvoice.invoiceType === 'quotation' ? 'Quotation / Estimate' : 'Simple Bill'}</strong></div>
+                <div>Document Type: <strong className={`uppercase ${
+                  selectedInvoice.invoiceType === 'credit_note' ? 'text-emerald-700' :
+                  selectedInvoice.invoiceType === 'bill_of_supply' ? 'text-purple-700' :
+                  selectedInvoice.invoiceType === 'delivery_challan' ? 'text-orange-700' :
+                  selectedInvoice.invoiceType === 'quotation' ? 'text-amber-600' : 'text-[#2563EB]'
+                }`}>
+                  {selectedInvoice.invoiceType === 'gst' ? 'GST Tax Invoice' :
+                   selectedInvoice.invoiceType === 'credit_note' ? 'GST Credit Note' :
+                   selectedInvoice.invoiceType === 'bill_of_supply' ? 'Bill of Supply' :
+                   selectedInvoice.invoiceType === 'delivery_challan' ? 'Delivery Challan' :
+                   selectedInvoice.invoiceType === 'quotation' ? 'Quotation / Estimate' : 'Simple Bill'}
+                </strong></div>
                 <div>Payment Mode: <strong className="text-[#15803D] uppercase">{selectedInvoice.paymentMode}</strong></div>
                 {selectedInvoice.transactionRef && <div>Transaction Ref / UTR: <span className="text-[#B45309]">{selectedInvoice.transactionRef}</span></div>}
               </div>
+
+              {selectedInvoice.originalInvoiceNumber && (
+                <div className="col-span-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <div className="text-[10px] font-bold uppercase text-emerald-800">Linked Original Invoice (CGST Rule 53):</div>
+                  <div className="text-xs font-bold text-emerald-950 mt-0.5">
+                    Invoice #{selectedInvoice.originalInvoiceNumber} {selectedInvoice.originalInvoiceDate ? `dated ${formatDate(selectedInvoice.originalInvoiceDate)}` : ''}
+                    {selectedInvoice.returnReason ? ` • Reason: ${selectedInvoice.returnReason}` : ''}
+                  </div>
+                </div>
+              )}
 
               {selectedInvoice.notes && (
                 <div className="col-span-2 p-2.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-lg">
@@ -785,18 +837,31 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-[#D8E1EC] gap-2">
-              {selectedInvoice.status === 'completed' ? (
-                <button
-                  type="button"
-                  onClick={() => handleOpenReversal(selectedInvoice)}
-                  className="px-3 py-2 bg-[#FEE2E2] hover:bg-[#FECDD3] text-[#B91C1C] border border-[#FCA5A5] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <XCircle className="w-4 h-4" /> Cancel / Reverse Invoice
-                </button>
-              ) : (
-                <Badge variant="rose">CANCELLED / REVERSED</Badge>
-              )}
+            <div className="flex flex-wrap items-center justify-between pt-3 border-t border-[#D8E1EC] gap-2">
+              <div className="flex items-center gap-2">
+                {selectedInvoice.status === 'completed' && selectedInvoice.invoiceType !== 'credit_note' && selectedInvoice.invoiceType !== 'quotation' && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreditNote(selectedInvoice)}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Issue GST Credit Note / Sales Return against this invoice"
+                  >
+                    <RotateCcw className="w-4 h-4 text-emerald-600" /> Issue Credit Note / Return
+                  </button>
+                )}
+
+                {selectedInvoice.status === 'completed' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReversal(selectedInvoice)}
+                    className="px-3 py-2 bg-[#FEE2E2] hover:bg-[#FECDD3] text-[#B91C1C] border border-[#FCA5A5] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <XCircle className="w-4 h-4" /> Cancel / Reverse
+                  </button>
+                ) : (
+                  <Badge variant="rose">CANCELLED / REVERSED</Badge>
+                )}
+              </div>
               
               <div className="flex items-center gap-2">
                 {selectedInvoice.invoiceType === 'quotation' && (
@@ -818,7 +883,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
                   onClick={() => handleReprintA5(selectedInvoice)}
                   className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" /> Print {printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm Receipt' : 'A5 Invoice'}
+                  <Printer className="w-4 h-4" /> Print / Share Invoice
                 </button>
               </div>
             </div>
@@ -963,6 +1028,30 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
         isOpen={isShareReportsModalOpen}
         onClose={() => setIsShareReportsModalOpen(false)}
         onToast={onToast}
+      />
+
+      {/* Statutory Credit Note / Sales Return Modal (CGST Rule 53) */}
+      <CreditNoteModal
+        isOpen={isCreditNoteModalOpen}
+        onClose={() => {
+          setIsCreditNoteModalOpen(false);
+          setCreditNoteTargetInvoice(null);
+        }}
+        invoice={creditNoteTargetInvoice}
+        onSuccess={handleCreditNoteSuccess}
+        onToast={onToast}
+      />
+
+      {/* Universal Print & Share Preview Modal */}
+      <A5PrintPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => {
+          setIsPreviewModalOpen(false);
+          setPreviewInvoice(null);
+        }}
+        invoice={previewInvoice}
+        shopProfile={shopProfile}
+        printSettings={printSettings}
       />
     </div>
   );

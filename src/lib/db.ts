@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import type { Product, Invoice, DraftInvoice, StockMovement, Customer, Supplier, PurchaseInvoice, ShopProfile, PrintSettings, SupabaseConfig } from '../types';
+import type { Product, Invoice, DraftInvoice, StockMovement, Customer, Supplier, PurchaseInvoice, ShopProfile, PrintSettings, BillingSettings, SupabaseConfig } from '../types';
 
 export class WebRajyaDatabase extends Dexie {
   products!: Table<Product, string>;
@@ -43,7 +43,7 @@ export const db = new WebRajyaDatabase();
 // Default Shop Profile Settings
 export const DEFAULT_SHOP_PROFILE: ShopProfile = {
   shopName: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SHOP_NAME && import.meta.env.VITE_SHOP_NAME !== 'CHANDRA TRADING COMPANY') ? import.meta.env.VITE_SHOP_NAME : 'WebRajya Retail POS',
-  tagline: 'Retail & Stationery Billing',
+  tagline: 'Retail POS & Billing',
   address: 'Main Market Road',
   phone: '',
   email: '',
@@ -67,6 +67,15 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   showBankDetails: true,
   showTerms: true,
   autoPrintOnSave: true
+};
+
+export const DEFAULT_BILLING_SETTINGS: BillingSettings = {
+  defaultInvoiceType: 'gst',
+  showAdvancedModes: false,
+  enableBos: false,
+  enableChallan: false,
+  enableEstimate: false,
+  enableIgst: true
 };
 
 export const DEFAULT_SUPABASE_CONFIG: SupabaseConfig = {

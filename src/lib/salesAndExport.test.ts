@@ -135,7 +135,7 @@ export async function runSalesAndExportTestSuite(): Promise<SalesReportTestResul
 
   // 2. TEST 2: DAILY REPORTING SUMMARY CALCULATIONS
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toLocaleDateString('en-CA');
     const invoices = await db.invoices.toArray();
     const todayCompleted = invoices.filter(i => i.date === todayStr && i.status === 'completed');
 

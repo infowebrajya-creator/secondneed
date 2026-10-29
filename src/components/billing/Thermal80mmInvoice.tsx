@@ -1,11 +1,12 @@
 import React from 'react';
-import { Invoice, ShopProfile, PrintSettings } from '../../types';
+import { Invoice, ShopProfile, PrintSettings, PrintCopyType } from '../../types';
 import { numberToWordsIndian } from '../../utils/numberToWords';
 
 interface Thermal80mmInvoiceProps {
   invoice: Invoice;
   shopProfile: ShopProfile;
   printSettings?: PrintSettings;
+  copyType?: PrintCopyType;
 }
 
 function formatDateDDMMYYYY(dateStr: string): string {
@@ -22,11 +23,17 @@ function formatDateDDMMYYYY(dateStr: string): string {
 export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
   invoice,
   shopProfile,
-  printSettings
+  printSettings,
+  copyType = 'original'
 }) => {
   const isGstInvoice = invoice.invoiceType === 'gst';
   const isQuotation = invoice.invoiceType === 'quotation';
   const docTitle = isQuotation ? 'QUOTATION / ESTIMATE' : isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+  const copyLabel = 
+    copyType === 'duplicate' ? 'DUPLICATE FOR TRANSPORTER' :
+    copyType === 'triplicate' ? 'TRIPLICATE FOR SUPPLIER' :
+    'ORIGINAL FOR RECIPIENT';
+
   const formattedDate = formatDateDDMMYYYY(invoice.date);
   const items = invoice.items || [];
   const showGst = printSettings?.showGstBreakdown ?? true;
@@ -37,6 +44,8 @@ export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
   const termsList = shopProfile.termsAndConditions
     ? shopProfile.termsAndConditions.split('\n').filter(t => t.trim() !== '')
     : ['Goods once sold will not be taken back without bill.', 'Subject to local jurisdiction.'];
+
+  const placeOfSupplyText = invoice.placeOfSupply || (invoice.isInterstate ? 'Inter-State' : (shopProfile.state || 'Madhya Pradesh (23)'));
 
   return (
     <div
@@ -73,9 +82,12 @@ export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
           </div>
           {shopProfile.state && <div>State: {shopProfile.state}</div>}
         </div>
-        <div>
-          <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px', padding: '1px 6px', border: '1px solid #000', margin: '4px 0 2px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', margin: '4px 0 2px 0' }}>
+          <span style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px', padding: '1px 6px', border: '1px solid #000' }}>
             {docTitle}
+          </span>
+          <span style={{ fontSize: '8px', fontWeight: 800, textTransform: 'uppercase', padding: '1px 4px', border: '1px solid #64748b', color: '#334155' }}>
+            {copyLabel}
           </span>
         </div>
       </div>
@@ -90,6 +102,10 @@ export const Thermal80mmInvoice: React.FC<Thermal80mmInvoiceProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', lineHeight: 1.3 }}>
         <span>Time: {invoice.time || ''}</span>
         <span>Mode: <strong>{invoice.paymentMode.toUpperCase()}</strong></span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#444' }}>
+        <span>POS: <strong>{placeOfSupplyText}</strong></span>
+        <span>RCM: <strong>{invoice.reverseCharge ? 'YES' : 'NO'}</strong></span>
       </div>
 
       {invoice.customerName && invoice.customerName.toLowerCase() !== 'cash customer' && (

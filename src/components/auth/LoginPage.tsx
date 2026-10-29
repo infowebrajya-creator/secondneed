@@ -57,7 +57,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
             <div className="text-sm font-black text-[#0F172A] tracking-wider uppercase leading-none">
               WEBRAJYA <span className="text-[#D9683E]">INVOICE</span>
             </div>
-            <div className="text-[11px] text-[#6B5E4C] font-semibold mt-0.5">Stationery Billing & Retail ERP</div>
+            <div className="text-[11px] text-[#6B5E4C] font-semibold mt-0.5">Retail Billing & Store ERP</div>
           </div>
         </div>
 
@@ -99,7 +99,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
             Sign In To <span className="text-[#D9683E]">WebRajya Invoice.</span>
           </h1>
           <p className="text-xs sm:text-sm text-[#6B5E4C] font-medium mt-1">
-            Zero-lag speed, offline resilience, and fast stationery billing.
+            Zero-lag speed, offline resilience, and fast retail billing.
           </p>
         </div>
 
@@ -259,7 +259,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onOpenSupport }) => {
           {/* WebRajya Product Catalogue Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold text-[#0F172A]">
             <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E5D7C3] flex items-center gap-1.5 shadow-2xs">
-              <ShoppingBag className="w-3.5 h-3.5 text-[#D9683E]" /> Stationery Invoicing
+              <ShoppingBag className="w-3.5 h-3.5 text-[#D9683E]" /> Retail Invoicing
             </span>
             <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E5D7C3] flex items-center gap-1.5 shadow-2xs">
               <Receipt className="w-3.5 h-3.5 text-[#2563EB]" /> GST E-Invoicing

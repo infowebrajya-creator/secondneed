@@ -1,4 +1,4 @@
-import { Invoice, ShopProfile, PrintSettings } from '../types';
+import { Invoice, ShopProfile, PrintSettings, PrintCopyType } from '../types';
 import { numberToWordsIndian } from '../utils/numberToWords';
 import { printInvoiceSilentUsb, isUsbPrinterConnected } from './usbPrinter';
 import { printInvoiceSilentBluetooth, isBluetoothPrinterConnected } from './bluetoothPrinter';
@@ -16,47 +16,107 @@ function formatDateDDMMYYYY(dateStr: string): string {
   return dateStr;
 }
 
-export async function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+export async function triggerInvoicePrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings, copyType?: PrintCopyType) {
   if (printSettings?.paperSize === '58mm') {
     return await trigger58mmPrint(invoice, shop, printSettings);
   }
   if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
-    return await trigger80mmPrint(invoice, shop, printSettings);
+    return await trigger80mmPrint(invoice, shop, printSettings, copyType);
   }
-  return triggerA5Print(invoice, shop, printSettings);
+  return triggerA5Print(invoice, shop, printSettings, copyType);
 }
 
-export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings, copyType?: PrintCopyType) {
   if (printSettings?.paperSize === '58mm') {
     return trigger58mmPrint(invoice, shop, printSettings);
   }
   if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
-    return trigger80mmPrint(invoice, shop, printSettings);
+    return trigger80mmPrint(invoice, shop, printSettings, copyType);
   }
   const isGstInvoice = invoice.invoiceType === 'gst';
+  const isBillOfSupply = invoice.invoiceType === 'bill_of_supply';
+  const isChallan = invoice.invoiceType === 'delivery_challan';
+  const isCreditNote = invoice.invoiceType === 'credit_note';
   const isQuotation = invoice.invoiceType === 'quotation';
-  const docTitle = isQuotation ? 'QUOTATION / PROFORMA' : isGstInvoice ? 'TAX INVOICE' : 'CREDIT ESTIMATE';
-  const docNoLabel = isQuotation ? 'Quotation No.' : isGstInvoice ? 'Invoice No.' : 'Estimate No.';
+
+  const docTitle = 
+    isCreditNote ? 'CREDIT NOTE' :
+    isChallan ? 'DELIVERY CHALLAN' :
+    isBillOfSupply ? 'BILL OF SUPPLY' :
+    isQuotation ? 'QUOTATION / PROFORMA' :
+    isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+
+  const docNoLabel = 
+    isCreditNote ? 'Credit Note No.' :
+    isChallan ? 'Challan No.' :
+    isBillOfSupply ? 'Bill of Supply No.' :
+    isQuotation ? 'Quotation No.' :
+    isGstInvoice ? 'Invoice No.' : 'Estimate No.';
+
   const formattedDate = formatDateDDMMYYYY(invoice.date);
+
+  const activeCopy: PrintCopyType = copyType || invoice.copyType || 'original';
+  const copyLabel = 
+    isChallan ? (
+      activeCopy === 'duplicate' ? 'DUPLICATE FOR TRANSPORTER' :
+      activeCopy === 'triplicate' ? 'TRIPLICATE FOR CONSIGNER' :
+      'ORIGINAL FOR CONSIGNEE'
+    ) : (
+      activeCopy === 'duplicate' ? 'DUPLICATE FOR TRANSPORTER' :
+      activeCopy === 'triplicate' ? 'TRIPLICATE FOR SUPPLIER' :
+      'ORIGINAL FOR RECIPIENT'
+    );
 
   const isA4 = printSettings?.paperSize === 'A4';
   const items = invoice.items || [];
-  const minRows = isA4 ? 32 : 24;
+  const minRows = isA4 ? 24 : 14;
   const paddingRowsCount = Math.max(0, minRows - items.length);
 
+  // Compute GST Tax Slab Breakdown (Rule 46(k) & (l))
+  const map = new Map<string, { hsn: string; rate: number; taxable: number; cgst: number; sgst: number; igst: number; total: number }>();
+  for (const it of items) {
+    const hsn = it.hsnCode || '4820';
+    const rate = Number(it.gstRate ?? 12);
+    const key = `${hsn}_${rate}`;
+    const taxable = Number(it.taxableAmount || (it.unitRate * it.qty * (1 - (it.discountPct || 0) / 100)) || 0);
+    const itemTax = Number(it.totalAmount ? it.totalAmount - taxable : (taxable * rate / 100));
+    const cgst = invoice.isInterstate ? 0 : itemTax / 2;
+    const sgst = invoice.isInterstate ? 0 : itemTax / 2;
+    const igst = invoice.isInterstate ? itemTax : 0;
+
+    if (!map.has(key)) {
+      map.set(key, { hsn, rate, taxable, cgst, sgst, igst, total: itemTax });
+    } else {
+      const row = map.get(key)!;
+      row.taxable += taxable;
+      row.cgst += cgst;
+      row.sgst += sgst;
+      row.igst += igst;
+      row.total += itemTax;
+    }
+  }
+  const taxSlabs = Array.from(map.values());
+
   const itemsHtml = items.map((item, index) => {
-    const remarkText = item.remark || item.pack || (item.hsnCode ? `HSN:${item.hsnCode}` : '');
-    const itemTotal = item.totalAmount || (item.unitRate * item.qty * (1 - (item.discountPct || 0) / 100));
+    const taxableVal = item.taxableAmount || (item.unitRate * item.qty * (1 - (item.discountPct || 0) / 100));
+    const itemTotal = item.totalAmount || taxableVal;
+    const unitLabel = item.unit || 'Pcs';
+    const hsnLabel = item.hsnCode || '4820';
+    const freeText = item.freeQty ? ` <span style="color: #047857; font-weight: bold;">(+${item.freeQty} Free)</span>` : '';
+
     return `
       <tr class="item-row">
         <td style="text-align: center; border-right: 1px solid #000; font-family: monospace;">${index + 1}</td>
-        <td style="border-right: 1px solid #000; padding: 1px 3px; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.productName}</td>
-        <td style="text-align: center; border-right: 1px solid #000; font-size: 7.5px; text-transform: uppercase;">${remarkText || ''}</td>
+        <td style="border-right: 1px solid #000; padding: 1px 3px; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${item.productName}${freeText}
+        </td>
+        <td style="text-align: center; border-right: 1px solid #000; font-family: monospace; font-size: 7px;">${hsnLabel}</td>
+        <td style="text-align: center; border-right: 1px solid #000; font-size: 7px; text-transform: uppercase;">${unitLabel}</td>
         <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${item.qty.toFixed(2)}</td>
-        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${(item.freeQty || 0).toFixed(2)}</td>
         <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${item.unitRate.toFixed(2)}</td>
         <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${item.mrp.toFixed(2)}</td>
         <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${(item.discountPct || 0).toFixed(2)}</td>
+        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${taxableVal.toFixed(2)}</td>
         <td style="text-align: right; padding-right: 3px; font-family: monospace; font-weight: 700;">${itemTotal.toFixed(2)}</td>
       </tr>
     `;
@@ -72,22 +132,60 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
       <td style="border-right: 1px solid #000;">&nbsp;</td>
       <td style="border-right: 1px solid #000;">&nbsp;</td>
       <td style="border-right: 1px solid #000;">&nbsp;</td>
+      <td style="border-right: 1px solid #000;">&nbsp;</td>
       <td>&nbsp;</td>
     </tr>
   `).join('');
 
+  const taxSummaryHtml = isGstInvoice && taxSlabs.length > 0 ? `
+    <div class="tax-summary-block">
+      <table class="tax-summary-table">
+        <thead>
+          <tr>
+            <th style="text-align: left;">HSN/SAC</th>
+            <th style="text-align: right;">Taxable Val</th>
+            ${!invoice.isInterstate ? `
+              <th style="text-align: right;">CGST Rate</th>
+              <th style="text-align: right;">CGST Amt</th>
+              <th style="text-align: right;">SGST Rate</th>
+              <th style="text-align: right;">SGST Amt</th>
+            ` : `
+              <th style="text-align: right;">IGST Rate</th>
+              <th style="text-align: right;">IGST Amt</th>
+            `}
+            <th style="text-align: right;">Total Tax</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${taxSlabs.map(s => `
+            <tr>
+              <td style="text-align: left;">${s.hsn}</td>
+              <td style="text-align: right;">${s.taxable.toFixed(2)}</td>
+              ${!invoice.isInterstate ? `
+                <td style="text-align: right;">${(s.rate / 2).toFixed(1)}%</td>
+                <td style="text-align: right;">${s.cgst.toFixed(2)}</td>
+                <td style="text-align: right;">${(s.rate / 2).toFixed(1)}%</td>
+                <td style="text-align: right;">${s.sgst.toFixed(2)}</td>
+              ` : `
+                <td style="text-align: right;">${s.rate.toFixed(1)}%</td>
+                <td style="text-align: right;">${s.igst.toFixed(2)}</td>
+              `}
+              <td style="text-align: right; font-weight: bold;">${s.total.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  ` : '';
+
   const termsList = shop.termsAndConditions
     ? shop.termsAndConditions.split('\n').filter(t => t.trim() !== '')
-    : ['Goods once sold will not be taken back or exchanged.', 'All disputes subject to Jurisdiction only.'];
+    : ['Goods once sold will not be taken back without bill.', 'All disputes subject to local jurisdiction only.'];
 
   const grossSubtotal = invoice.subtotal + (invoice.totalDiscount || 0);
-
-  // Determine header party text
   const isPartyGiven = invoice.customerName && invoice.customerName.trim().toLowerCase() !== 'cash customer';
-  const partyLine1 = isPartyGiven ? `M/s ${invoice.customerName.trim().toUpperCase()}` : `M/s ${shop.shopName || 'Retail Store'}`;
-  const partyLine2 = isPartyGiven
-    ? (invoice.customerAddress ? invoice.customerAddress.trim().toUpperCase() : '')
-    : (shop.address || '');
+  const stateDisplayName = shop.state || 'Madhya Pradesh (23)';
+  const placeOfSupplyText = invoice.placeOfSupply || (invoice.isInterstate ? 'Inter-State Supply' : stateDisplayName);
 
   const html = `
     <!DOCTYPE html>
@@ -345,52 +443,68 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
       </head>
       <body>
         <div class="outer-frame">
-          <!-- TOP HEADER -->
+          <!-- 1. TOP TITLE & COPY INDICATOR -->
+          <div class="title-bar">
+            <div class="gst-tag">GSTIN: <strong>${shop.gstin || 'UNREGISTERED'}</strong></div>
+            <div class="main-doc-title">
+              <div>${docTitle}</div>
+              ${isBillOfSupply ? '<div style="font-size: 6.5px; font-weight: bold; color: #b45309; text-transform: none; letter-spacing: normal;">Composition taxable person, not eligible to collect tax on supplies</div>' : ''}
+              ${isCreditNote && invoice.originalInvoiceNumber ? `<div style="font-size: 6.5px; font-weight: bold; color: #b91c1c; text-transform: none; letter-spacing: normal;">Against Tax Invoice #${invoice.originalInvoiceNumber} Dated: ${formatDateDDMMYYYY(invoice.originalInvoiceDate || '')}</div>` : ''}
+              ${isChallan ? `<div style="font-size: 6.5px; font-weight: bold; color: #1e3a8a; text-transform: none; letter-spacing: normal;">Transportation of Goods Without Issue of Invoice (Rule 55)${invoice.challanPurpose ? ` • Purpose: ${invoice.challanPurpose.replace(/_/g, ' ').toUpperCase()}` : ''}</div>` : ''}
+            </div>
+            <div class="copy-badge">${copyLabel}</div>
+          </div>
+
+          <!-- 2. TWO-COLUMN STATUTORY HEADER -->
           <div class="header-block">
-            <div class="header-left">
-              <div class="party-title">${partyLine1}</div>
-              <div class="party-sub">${partyLine2}</div>
-              ${isPartyGiven && invoice.customerMobile ? `<div class="party-meta">Ph: ${invoice.customerMobile}</div>` : ''}
-              ${isPartyGiven && invoice.customerGstin ? `<div class="party-meta">GSTIN: ${invoice.customerGstin}</div>` : ''}
+            <div class="supplier-col">
+              <div class="section-tag">Details of Supplier (Seller):</div>
+              <div class="firm-name">${shop.shopName || 'Retail Store'}</div>
+              <div style="font-size: 8px; font-weight: 600;">${shop.address || ''}</div>
+              <div style="font-size: 7.5px;">
+                ${shop.phone ? `Ph: ${shop.phone} ` : ''}
+                ${shop.email ? `| ${shop.email}` : ''}
+              </div>
+              <div style="font-size: 7.5px; font-weight: 700;">State: ${stateDisplayName}</div>
             </div>
 
-            <div class="header-center">
-              <div class="doc-title">${docTitle}</div>
-              ${isPartyGiven ? `<div class="shop-tag">M/s ${shop.shopName || 'Retail Store'}</div>` : ''}
-            </div>
-
-            <div class="header-right">
-              <div class="meta-row">
-                <span class="meta-lbl">${docNoLabel} :</span>
-                <span class="meta-val">${invoice.invoiceNumber}</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-lbl">Date :</span>
-                <span class="meta-val">${formattedDate}</span>
-              </div>
-              ${invoice.time ? `
-                <div class="meta-row" style="font-size: 8px; color: #333;">
-                  <span>Time :</span>
-                  <span>${invoice.time}</span>
+            <div class="recipient-col">
+              <div>
+                <div style="display: flex; justify-content: space-between;" class="section-tag">
+                  <span>Details of Recipient (Buyer):</span>
+                  <span><strong>${docNoLabel}: #${invoice.invoiceNumber}</strong></span>
                 </div>
-              ` : ''}
+                <div class="party-name">
+                  ${isPartyGiven ? `M/s ${invoice.customerName.trim().toUpperCase()}` : 'CASH CUSTOMER (WALK-IN)'}
+                </div>
+                ${isPartyGiven && invoice.customerAddress ? `<div style="font-size: 7.5px;">${invoice.customerAddress}</div>` : ''}
+                <div style="font-size: 7.5px;">
+                  ${isPartyGiven && invoice.customerMobile ? `Ph: ${invoice.customerMobile} ` : ''}
+                  ${isPartyGiven && invoice.customerGstin ? `| GSTIN: <strong>${invoice.customerGstin}</strong>` : ''}
+                </div>
+              </div>
+              <div class="meta-sub-row">
+                <span>Date: <strong>${formattedDate}</strong> ${invoice.time || ''}</span>
+                <span>POS: <strong>${placeOfSupplyText}</strong></span>
+              </div>
             </div>
           </div>
 
-          <!-- TABLE -->
+          <!-- 3. ITEMS TABLE -->
           <div class="table-container">
             <table class="items-table">
               <thead>
                 <tr>
                   <th style="width: 4%; text-align: center;">S.</th>
-                  <th style="width: 44%; text-align: left; padding-left: 3px;">Item Description</th>
-                  <th style="width: 7%; text-align: center;">REMARK</th>
-                  <th style="width: 7%; text-align: right; padding-right: 2px;">Qty.</th>
-                  <th style="width: 6%; text-align: right; padding-right: 2px;">FREE</th>
-                  <th style="width: 8%; text-align: right; padding-right: 2px;">Rate</th>
-                  <th style="width: 8%; text-align: right; padding-right: 2px;">MRP</th>
-                  <th style="width: 6%; text-align: right; padding-right: 2px;">DIS%</th>
-                  <th style="width: 10%; text-align: right; padding-right: 3px;">Amount</th>
+                  <th style="width: 33%; text-align: left; padding-left: 3px;">Item Description</th>
+                  <th style="width: 8%; text-align: center;">HSN</th>
+                  <th style="width: 6%; text-align: center;">Unit</th>
+                  <th style="width: 7%; text-align: right;">Qty</th>
+                  <th style="width: 8%; text-align: right;">Rate</th>
+                  <th style="width: 8%; text-align: right;">MRP</th>
+                  <th style="width: 6%; text-align: right;">Dis%</th>
+                  <th style="width: 9%; text-align: right;">Taxable</th>
+                  <th style="width: 11%; text-align: right; padding-right: 3px;">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -405,68 +519,88 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
                   <td style="border-right: 1px solid #000;">&nbsp;</td>
                   <td style="border-right: 1px solid #000;">&nbsp;</td>
                   <td style="border-right: 1px solid #000;">&nbsp;</td>
+                  <td style="border-right: 1px solid #000;">&nbsp;</td>
                   <td>&nbsp;</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <!-- FOOTER -->
+          <!-- 4. GST TAX SUMMARY GRID -->
+          ${taxSummaryHtml}
+
+          <!-- 5. FOOTER -->
           <div class="footer-block">
             <div class="footer-left">
               <div class="words-row">
                 Rs. <span style="text-transform: capitalize;">${numberToWordsIndian(invoice.netPayable)}</span> only
               </div>
 
-              <div class="remark-box">
-                Remark : ${invoice.notes || ''}
+              <div class="rcm-box">
+                <div>Tax Payable on Reverse Charge (RCM): <strong>${invoice.reverseCharge ? 'YES' : 'NO'}</strong></div>
+                ${invoice.notes ? `<div>Remark: <strong>${invoice.notes}</strong></div>` : ''}
               </div>
 
+              ${shop.bankName && shop.accountNo ? `
+                <div class="bank-box">
+                  <div>Bank: <strong>${shop.bankName}</strong> | A/C: <strong>${shop.accountNo}</strong></div>
+                  <div>IFSC: <strong>${shop.ifscCode}</strong> ${shop.upiId ? `| UPI ID: ${shop.upiId}` : ''}</div>
+                </div>
+              ` : ''}
+
               <div class="terms-box">
-                <div class="terms-header">Terms & Conditions</div>
-                ${termsList.map(t => `<div>${t}</div>`).join('')}
+                <div class="terms-header">Terms & Conditions:</div>
+                ${termsList.slice(0, 3).map(t => `<div>• ${t}</div>`).join('')}
               </div>
             </div>
 
             <div class="footer-right">
               <div class="totals-table">
                 <div class="tot-row">
-                  <span>SUB TOTAL</span>
+                  <span>SUB TOTAL:</span>
                   <span>${grossSubtotal.toFixed(2)}</span>
                 </div>
                 ${invoice.totalDiscount > 0 ? `
-                  <div class="tot-row">
-                    <span>DISCOUNT</span>
-                    <span>${invoice.totalDiscount.toFixed(2)}</span>
+                  <div class="tot-row" style="color: #b91c1c;">
+                    <span>DISCOUNT:</span>
+                    <span>-${invoice.totalDiscount.toFixed(2)}</span>
                   </div>
                 ` : ''}
                 ${invoice.freightAmount > 0 ? `
                   <div class="tot-row">
-                    <span>FRIGHT</span>
+                    <span>FREIGHT:</span>
                     <span>${invoice.freightAmount.toFixed(2)}</span>
                   </div>
                 ` : ''}
                 ${isGstInvoice && invoice.totalGst > 0 ? `
                   <div class="tot-row">
-                    <span>GST TAX</span>
+                    <span>TOTAL GST:</span>
                     <span>${invoice.totalGst.toFixed(2)}</span>
                   </div>
                 ` : ''}
+                ${invoice.roundOff !== 0 ? `
+                  <div class="tot-row">
+                    <span>ROUND OFF:</span>
+                    <span>${invoice.roundOff > 0 ? '+' : ''}${invoice.roundOff.toFixed(2)}</span>
+                  </div>
+                ` : ''}
                 <div class="tot-row tot-grand">
-                  <span>GRAND TOTAL</span>
-                  <span>${invoice.netPayable.toFixed(2)}</span>
+                  <span>NET PAYABLE:</span>
+                  <span>₹${invoice.netPayable.toFixed(2)}</span>
                 </div>
               </div>
 
               <div class="signatory-area">
-                Authorised signatory
+                <div>For ${shop.shopName || 'Retail Store'}</div>
+                <div style="height: 14px;"></div>
+                <div>Authorised Signatory</div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="sub-footer-text">
-          ${shop.shopName ? shop.shopName.toUpperCase() : 'WEBRAJYA POS'} | POS SOFTWARE PRINT ENGINE
+          ${shop.shopName ? shop.shopName.toUpperCase() : 'WEBRAJYA POS'} | GST TAX INVOICE ENGINE
         </div>
 
         <script>
@@ -546,9 +680,15 @@ function executeBrowserPrint(html: string, popupWidth = 800, popupHeight = 950, 
 // -------------------------------------------------------------
 // 80mm THERMAL / PLAIN POS RECEIPT PRINT ENGINE (3-INCH ROLL)
 // -------------------------------------------------------------
-export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings): string {
+export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings, copyType?: PrintCopyType): string {
   const isGstInvoice = invoice.invoiceType === 'gst';
-  const docTitle = isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+  const isQuotation = invoice.invoiceType === 'quotation';
+  const docTitle = isQuotation ? 'QUOTATION / ESTIMATE' : isGstInvoice ? 'TAX INVOICE' : 'RETAIL CASH MEMO';
+  const activeCopy: PrintCopyType = copyType || invoice.copyType || 'original';
+  const copyLabel = 
+    activeCopy === 'duplicate' ? 'DUPLICATE FOR TRANSPORTER' :
+    activeCopy === 'triplicate' ? 'TRIPLICATE FOR SUPPLIER' :
+    'ORIGINAL FOR RECIPIENT';
   const formattedDate = formatDateDDMMYYYY(invoice.date);
   const items = invoice.items || [];
   const showGst = printSettings?.showGstBreakdown ?? true;
@@ -695,8 +835,9 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
               ${shop.gstin ? `| GSTIN: <strong>${shop.gstin}</strong>` : ''}
               ${shop.state ? `<br />State: ${shop.state}` : ''}
             </div>
-            <div>
-              <span class="doc-type-badge">${docTitle}</span>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 4px; margin: 3px 0 1px 0;">
+              <span class="doc-type-badge" style="margin: 0;">${docTitle}</span>
+              <span style="font-size: 8px; font-weight: 800; text-transform: uppercase; border: 1px solid #64748b; padding: 1px 4px; color: #334155;">${copyLabel}</span>
             </div>
           </div>
 
@@ -710,6 +851,10 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
           <div class="meta-row">
             <span>Time: ${invoice.time || ''}</span>
             <span>Mode: <strong>${invoice.paymentMode.toUpperCase()}</strong></span>
+          </div>
+          <div class="meta-row" style="font-size: 8.5px; color: #444;">
+            <span>POS: <strong>${invoice.placeOfSupply || (invoice.isInterstate ? 'Inter-State' : (shop.state || 'Madhya Pradesh (23)'))}</strong></span>
+            <span>RCM: <strong>${invoice.reverseCharge ? 'YES' : 'NO'}</strong></span>
           </div>
 
           ${invoice.customerName && invoice.customerName.toLowerCase() !== 'cash customer' ? `
@@ -858,7 +1003,7 @@ export function generate80mmReceiptHtml(invoice: Invoice, shop: ShopProfile, pri
   `;
 }
 
-export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings) {
+export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings, copyType?: PrintCopyType) {
   // Check if Web Bluetooth printing should be attempted (mobile / wireless)
   const shouldTryBluetooth = printSettings?.printEngine === 'bluetooth' || (printSettings?.printEngine === 'auto' && isBluetoothPrinterConnected());
   if (shouldTryBluetooth) {
@@ -888,7 +1033,7 @@ export async function trigger80mmPrint(invoice: Invoice, shop: ShopProfile, prin
   }
 
   // Fallback to browser print (which is silent when Chrome --kiosk-printing or Electron is active)
-  const html = generate80mmReceiptHtml(invoice, shop, printSettings);
+  const html = generate80mmReceiptHtml(invoice, shop, printSettings, copyType);
   executeBrowserPrint(html, 420, 720, true);
   return { success: true, method: (typeof window !== 'undefined' && window.electronAPI?.isElectron) ? ('electron' as const) : ('browser' as const) };
 }
@@ -1002,4 +1147,43 @@ export async function trigger58mmPrint(invoice: Invoice, shop: ShopProfile, prin
   executeBrowserPrint(html, 320, 600, true);
   return { success: true, method: (typeof window !== 'undefined' && window.electronAPI?.isElectron) ? ('electron' as const) : ('browser' as const) };
 }
+
+export function openWhatsAppReceipt(inv: Invoice, shop: ShopProfile) {
+  const cleanPhone = (inv.customerMobile || '').replace(/\D/g, '');
+  if (!cleanPhone) return;
+  const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+  const itemsList = (inv.items || [])
+    .map((it, idx) => `${idx + 1}. ${it.productName} (${it.qty} ${it.unit || 'Pcs'}) - ₹${it.totalAmount.toFixed(2)}`)
+    .join('\n');
+
+  const receiptMessage = [
+    `*${shop.shopName || 'WebRajya Retail POS'}*`,
+    shop.address ? `${shop.address}` : '',
+    shop.phone ? `Ph: ${shop.phone}` : '',
+    `--------------------------------`,
+    `*TAX INVOICE / CASH MEMO*`,
+    `*Bill No:* #${inv.invoiceNumber}`,
+    `*Date:* ${new Date(inv.createdAt || Date.now()).toLocaleDateString('en-IN')}`,
+    `*Customer:* ${inv.customerName || 'Valued Customer'}`,
+    `--------------------------------`,
+    `*ITEMS:*`,
+    itemsList,
+    `--------------------------------`,
+    `*Subtotal:* ₹${inv.subtotal.toFixed(2)}`,
+    inv.totalDiscount > 0 ? `*Discount:* -₹${inv.totalDiscount.toFixed(2)}` : '',
+    inv.totalGst > 0 ? `*GST:* +₹${inv.totalGst.toFixed(2)}` : '',
+    `*NET PAYABLE:* ₹${inv.netPayable.toFixed(2)}`,
+    `*Payment Mode:* ${(inv.paymentMode || 'CASH').toUpperCase()} (PAID)`,
+    `--------------------------------`,
+    shop.upiId ? `Pay UPI: ${shop.upiId}` : '',
+    `Thank you for shopping with us! Visit again. 🙏`
+  ].filter(Boolean).join('\n');
+
+  const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(receiptMessage)}`;
+  if (typeof window !== 'undefined') {
+    window.open(waUrl, '_blank');
+  }
+}
+
 

@@ -517,6 +517,35 @@ export function generateCaReportHtml(data: CaReportData): string {
           </table>
         ` : ''}
 
+        <!-- GSTR-1 Table 13 Document Summary (Rule 48) -->
+        ${data.docSummaryTable13 && data.docSummaryTable13.length > 0 ? `
+          <div class="section-title">GSTR-1 Table 13: Documents Issued During Tax Period (Rule 48)</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 45%;">Nature of Document</th>
+                <th style="width: 15%; text-align: center;">Sr. No. From</th>
+                <th style="width: 15%; text-align: center;">Sr. No. To</th>
+                <th style="width: 8%; text-align: center;">Total Count</th>
+                <th style="width: 8%; text-align: center;">Cancelled</th>
+                <th style="width: 9%; text-align: center;">Net Issued</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.docSummaryTable13.map(row => `
+                <tr>
+                  <td style="font-weight: bold; color: #1e3a8a;">${row.natureOfDocument}</td>
+                  <td style="text-align: center; font-family: monospace;">${row.fromSrNo}</td>
+                  <td style="text-align: center; font-family: monospace;">${row.toSrNo}</td>
+                  <td style="text-align: center; font-family: monospace; font-weight: bold;">${row.totalCount}</td>
+                  <td style="text-align: center; font-family: monospace; color: #dc2626;">${row.cancelledCount}</td>
+                  <td style="text-align: center; font-family: monospace; font-weight: bold; color: #16a34a;">${row.netIssuedCount}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : ''}
+
         <!-- Audit & Reconciliation Notes -->
         ${data.validationNotes.length > 0 ? `
           <div style="margin-top: 12px; padding: 6px 10px; background-color: #fefce8; border: 1px solid #fde047; border-radius: 4px; font-size: 8px; color: #854d0e;">

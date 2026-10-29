@@ -1,7 +1,7 @@
 import { db } from './db';
 import { 
   ReportPeriodType, ReportPeriod, ReportCategoryId, ReportCategoryConfig, 
-  CaReportData, TaxRateBucket 
+  CaReportData, TaxRateBucket, Gstr1Table13Item 
 } from '../types/caReport';
 import { GstRate, Invoice, PurchaseInvoice, Customer, Supplier, Product, ShopProfile } from '../types';
 
@@ -427,6 +427,33 @@ export async function generateCaReportDataset(
   // Net tax position (calculated summary only)
   const netTaxBalance = Math.round((metrics.totalSalesGst - metrics.totalPurchasesGst) * 100) / 100;
 
+  // GSTR-1 Table 13 Document Summary Calculation (Rule 48)
+  const docSummaryTable13: Gstr1Table13Item[] = [];
+  const addDocGroup = (nature: string, docs: Invoice[]) => {
+    if (docs.length === 0) return;
+    const sorted = [...docs].sort((a, b) => (a.invoiceNumber || '').localeCompare(b.invoiceNumber || ''));
+    const cancelled = sorted.filter(d => d.status === 'cancelled');
+    const net = sorted.filter(d => d.status === 'completed');
+    docSummaryTable13.push({
+      natureOfDocument: nature,
+      fromSrNo: sorted[0]?.invoiceNumber || 'N/A',
+      toSrNo: sorted[sorted.length - 1]?.invoiceNumber || 'N/A',
+      totalCount: sorted.length,
+      cancelledCount: cancelled.length,
+      netIssuedCount: net.length
+    });
+  };
+
+  const gstInvoices = periodInvoices.filter(i => i.invoiceType === 'gst' || !i.invoiceType);
+  const bosInvoices = periodInvoices.filter(i => i.invoiceType === 'bill_of_supply');
+  const challans = periodInvoices.filter(i => i.invoiceType === 'delivery_challan');
+  const creditNotes = periodInvoices.filter(i => i.invoiceType === 'credit_note');
+
+  addDocGroup('Invoices for Outward Supply (Tax Invoice)', gstInvoices);
+  addDocGroup('Bill of Supply (Composition / Exempt)', bosInvoices);
+  addDocGroup('Delivery Challans for Job Work / Transportation', challans);
+  addDocGroup('Credit Notes (Sales Returns)', creditNotes);
+
   return {
     shopProfile,
     period,
@@ -448,6 +475,7 @@ export async function generateCaReportDataset(
     customers: allCustomers,
     suppliers: allSuppliers,
     inventory: allProducts,
-    validationNotes
+    validationNotes,
+    docSummaryTable13
   };
 }

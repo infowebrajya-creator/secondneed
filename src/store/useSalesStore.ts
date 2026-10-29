@@ -23,6 +23,11 @@ interface SalesState {
     invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'time' | 'status' | 'createdAt'>,
     invoicePrefix?: string
   ) => Promise<Invoice>;
+  createCreditNote: (params: {
+    originalInvoice: Invoice;
+    returnedItems: { item: any; returnQty: number }[];
+    returnReason: string;
+  }) => Promise<Invoice>;
   cancelInvoice: (invoiceId: string, restoreStock?: boolean, reason?: string) => Promise<void>;
   syncInvoicesWithSupabase: () => Promise<{ success: boolean; message: string }>;
   clearAllSalesData: (alsoClearSupabase?: boolean) => Promise<void>;
@@ -32,7 +37,11 @@ let realtimeSubscribed = false;
 
 function mapLocalInvoiceToRemote(inv: Invoice) {
   const cleanNotes = (inv.notes || '').replace(/\[\[meta:[^\]]+\]\]/g, '').trim();
-  const taggedNotes = `[[meta:pm=${inv.paymentMode}|type=${inv.invoiceType}|status=${inv.status}]] ${cleanNotes}`.trim();
+  const metaParts = [`pm=${inv.paymentMode}`, `type=${inv.invoiceType}`, `status=${inv.status}`];
+  if (inv.originalInvoiceNumber) metaParts.push(`origNum=${inv.originalInvoiceNumber}`);
+  if (inv.originalInvoiceDate) metaParts.push(`origDate=${inv.originalInvoiceDate}`);
+  if (inv.returnReason) metaParts.push(`retReason=${encodeURIComponent(inv.returnReason)}`);
+  const taggedNotes = `[[meta:${metaParts.join('|')}]] ${cleanNotes}`.trim();
 
   const invoiceRow = {
     id: inv.id,
@@ -93,6 +102,9 @@ function mapRemoteInvoiceToLocal(remoteInv: any): Invoice {
   let paymentMode: PaymentMode = 'cash';
   let invoiceType: any = 'gst';
   let status: any = 'completed';
+  let originalInvoiceNumber: string | undefined;
+  let originalInvoiceDate: string | undefined;
+  let returnReason: string | undefined;
   let cleanNotes = remoteInv.notes || '';
 
   if (cleanNotes.includes('[[meta:')) {
@@ -104,6 +116,9 @@ function mapRemoteInvoiceToLocal(remoteInv: any): Invoice {
         if (k === 'pm' && v) paymentMode = v as PaymentMode;
         if (k === 'type' && v) invoiceType = v;
         if (k === 'status' && v) status = v;
+        if (k === 'origNum' && v) originalInvoiceNumber = v;
+        if (k === 'origDate' && v) originalInvoiceDate = v;
+        if (k === 'retReason' && v) returnReason = decodeURIComponent(v);
       }
       cleanNotes = cleanNotes.replace(/\[\[meta:[^\]]+\]\]/, '').trim();
     }
@@ -179,6 +194,9 @@ function mapRemoteInvoiceToLocal(remoteInv: any): Invoice {
     status,
     isInterstate: Boolean(remoteInv.is_interstate),
     notes: cleanNotes || undefined,
+    originalInvoiceNumber,
+    originalInvoiceDate,
+    returnReason,
     idempotencyKey: remoteInv.idempotency_key || undefined,
     transactionRef: remoteInv.transaction_ref || undefined,
     upiReference: remoteInv.transaction_ref || undefined,
@@ -508,6 +526,197 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     }
 
     return resultInvoice;
+  },
+
+  createCreditNote: async ({ originalInvoice, returnedItems, returnReason }) => {
+    if (!originalInvoice) {
+      throw new Error('Original invoice is required to issue a credit note.');
+    }
+    const validReturns = returnedItems.filter(r => r.returnQty > 0);
+    if (validReturns.length === 0) {
+      throw new Error('At least one item must have return quantity greater than 0.');
+    }
+    for (const r of validReturns) {
+      if (r.returnQty > r.item.qty) {
+        throw new Error(`Return quantity for "${r.item.productName}" cannot exceed original billed quantity (${r.item.qty}).`);
+      }
+    }
+    if (!returnReason.trim()) {
+      throw new Error('Please specify a statutory reason for the sales return / credit note.');
+    }
+
+    // 1. Calculate credit items and tax reversals
+    const creditItems: any[] = validReturns.map((r, idx) => {
+      const ratio = r.returnQty / r.item.qty;
+      const taxable = Math.round(r.item.taxableAmount * ratio * 100) / 100;
+      const cgst = Math.round((r.item.cgstAmount || 0) * ratio * 100) / 100;
+      const sgst = Math.round((r.item.sgstAmount || 0) * ratio * 100) / 100;
+      const igst = Math.round((r.item.igstAmount || 0) * ratio * 100) / 100;
+      const disc = Math.round((r.item.discountAmount || 0) * ratio * 100) / 100;
+      const total = Math.round(r.item.totalAmount * ratio * 100) / 100;
+
+      return {
+        ...r.item,
+        id: `cn_item_${Date.now()}_${idx}_${r.item.productId}`,
+        qty: r.returnQty,
+        freeQty: 0,
+        taxableAmount: taxable,
+        cgstAmount: cgst,
+        sgstAmount: sgst,
+        igstAmount: igst,
+        discountAmount: disc,
+        totalAmount: total,
+      };
+    });
+
+    const subtotal = creditItems.reduce((acc, it) => acc + it.taxableAmount, 0);
+    const cgstTotal = creditItems.reduce((acc, it) => acc + (it.cgstAmount || 0), 0);
+    const sgstTotal = creditItems.reduce((acc, it) => acc + (it.sgstAmount || 0), 0);
+    const igstTotal = creditItems.reduce((acc, it) => acc + (it.igstAmount || 0), 0);
+    const totalGst = cgstTotal + sgstTotal + igstTotal;
+    const totalDiscount = creditItems.reduce((acc, it) => acc + (it.discountAmount || 0), 0);
+    const rawNet = creditItems.reduce((acc, it) => acc + it.totalAmount, 0);
+    const roundedNet = Math.round(rawNet);
+    const roundOff = Math.round((roundedNet - rawNet) * 100) / 100;
+
+    // 2. Generate sequential Credit Note number
+    const localInvoices = await db.invoices.toArray().catch(() => []);
+    const inMemoryInvoices = get().invoices || [];
+    const allKnownNumbers = Array.from(new Set([
+      ...localInvoices.map((i: any) => i.invoiceNumber),
+      ...inMemoryInvoices.map((i: any) => i.invoiceNumber)
+    ]));
+    const cnNumber = calculateNextInvoiceNumber(allKnownNumbers, 'CN-');
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-CA');
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const creditNote: Invoice = {
+      id: 'cn_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      invoiceNumber: cnNumber,
+      invoiceType: 'credit_note',
+      date: dateStr,
+      time: timeStr,
+      customerName: originalInvoice.customerName || 'Cash Customer',
+      customerMobile: originalInvoice.customerMobile || '',
+      customerGstin: originalInvoice.customerGstin,
+      customerAddress: originalInvoice.customerAddress,
+      placeOfSupply: originalInvoice.placeOfSupply || 'Madhya Pradesh (23)',
+      placeOfSupplyCode: originalInvoice.placeOfSupplyCode || '23',
+      reverseCharge: false,
+      copyType: 'original',
+      originalInvoiceId: originalInvoice.id,
+      originalInvoiceNumber: originalInvoice.invoiceNumber,
+      originalInvoiceDate: originalInvoice.date,
+      returnReason: returnReason.trim(),
+      items: creditItems,
+      subtotal,
+      totalDiscount,
+      totalGst,
+      cgstTotal,
+      sgstTotal,
+      igstTotal,
+      freightAmount: 0,
+      roundOff,
+      netPayable: roundedNet,
+      paymentMode: originalInvoice.paymentMode,
+      paidAmount: roundedNet,
+      balanceAmount: 0,
+      status: 'completed',
+      isInterstate: originalInvoice.isInterstate || false,
+      notes: `Credit Note issued against Original Invoice #${originalInvoice.invoiceNumber} dt. ${originalInvoice.date}. Reason: ${returnReason.trim()}`,
+      createdAt: now.toISOString(),
+      synced: false
+    };
+
+    // 3. Atomic Dexie transaction
+    await db.transaction('rw', db.invoices, db.products, db.stockMovements, db.customers, db.auditLogs, async () => {
+      await db.invoices.put(creditNote);
+
+      for (const ret of validReturns) {
+        const product = await db.products.get(ret.item.productId);
+        if (product) {
+          const prevStock = product.stockQty;
+          const newStock = prevStock + ret.returnQty;
+
+          await db.products.update(product.id, {
+            stockQty: newStock,
+            updatedAt: now.toISOString(),
+            synced: false
+          });
+
+          const movement: StockMovement = {
+            id: 'sm_cn_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            productId: product.id,
+            productName: product.name,
+            type: 'return',
+            quantityChange: ret.returnQty,
+            previousStock: prevStock,
+            newStock,
+            reason: `Credit Note ${cnNumber} against Inv #${originalInvoice.invoiceNumber}`,
+            createdAt: now.toISOString(),
+            referenceId: creditNote.id
+          };
+          await db.stockMovements.put(movement);
+        }
+      }
+
+      if (originalInvoice.paymentMode === 'credit' && originalInvoice.customerMobile) {
+        const customer = await db.customers.where('mobile').equals(originalInvoice.customerMobile).first();
+        if (customer && customer.creditBalance) {
+          const newCreditBalance = Math.max(0, customer.creditBalance - roundedNet);
+          await db.customers.update(customer.id, {
+            creditBalance: newCreditBalance,
+            updatedAt: now.toISOString()
+          });
+        }
+      }
+
+      const auditEntry: AuditLog = {
+        id: 'audit_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        action: 'CREDIT_NOTE_ISSUED',
+        tableName: 'invoices',
+        recordId: creditNote.id,
+        details: {
+          creditNoteNumber: cnNumber,
+          originalInvoiceNumber: originalInvoice.invoiceNumber,
+          originalInvoiceDate: originalInvoice.date,
+          netPayable: roundedNet,
+          reason: returnReason.trim(),
+          itemCount: creditItems.length
+        },
+        createdAt: now.toISOString()
+      };
+      await db.auditLogs.put(auditEntry);
+    });
+
+    // 4. Update in-memory state
+    set((state) => ({
+      invoices: [creditNote, ...state.invoices]
+    }));
+
+    // 5. Background Supabase sync
+    const client = getSupabaseClient();
+    if (client) {
+      (async () => {
+        try {
+          await ensureProductsExistInSupabase(client, creditNote.items);
+          const { invoiceRow, itemRows } = mapLocalInvoiceToRemote(creditNote);
+          const res = await client.from('invoices').upsert(invoiceRow, { onConflict: 'id' });
+          if (!res.error) {
+            if (itemRows.length > 0) {
+              await client.from('invoice_items').upsert(itemRows, { onConflict: 'id' });
+            }
+            await db.invoices.update(creditNote.id, { synced: true });
+          }
+        } catch (syncErr) {
+          console.warn('Background Supabase credit note sync warning:', syncErr);
+        }
+      })();
+    }
+
+    return creditNote;
   },
 
   cancelInvoice: async (invoiceId, restoreStock = true, reason = 'Invoice Reversal') => {
