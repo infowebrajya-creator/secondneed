@@ -118,7 +118,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       }
 
       const currentPrint = localPrint || (printRec ? { ...DEFAULT_PRINT_SETTINGS, ...printRec.value } : DEFAULT_PRINT_SETTINGS);
-      const currentBilling = localBilling || (billingRec ? { ...DEFAULT_BILLING_SETTINGS, ...billingRec.value } : DEFAULT_BILLING_SETTINGS);
+      const currentBilling = {
+        ...DEFAULT_BILLING_SETTINGS,
+        ...(localBilling || (billingRec ? billingRec.value : {}))
+      };
 
       set({
         shopProfile: currentShop,

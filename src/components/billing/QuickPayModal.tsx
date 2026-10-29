@@ -7,6 +7,7 @@ import { Modal } from '../common/Modal';
 import { PaymentMode, InvoiceItem, InvoiceType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { dispatchWhatsAppReceipt } from '../../lib/whatsappDispatcher';
 
 interface QuickPayModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface QuickPayModalProps {
   netPayable: number;
   paymentMode: PaymentMode;
   onSelectPaymentMode: (mode: PaymentMode) => void;
-  onConfirmPayment: (paidAmount: number, shouldPrint: boolean, upiRef?: string) => Promise<void> | void;
+  onConfirmPayment: (paidAmount: number, shouldPrint: boolean, upiRef?: string) => Promise<any> | any;
   isSubmitting?: boolean;
   items?: InvoiceItem[];
   totals?: {
@@ -54,7 +55,7 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
   notes = '',
   onNotesChange
 }) => {
-  const { shopProfile, printSettings } = useSettingsStore();
+  const { shopProfile, printSettings, billingSettings } = useSettingsStore();
   const paperFormat = printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal' ? '80mm' : printSettings?.paperSize === 'A4' ? 'A4' : 'A5';
 
   // Always prefer active shopProfile setting with fallback to prop
@@ -110,9 +111,19 @@ export const QuickPayModal: React.FC<QuickPayModalProps> = ({
     }
 
     // First save the invoice
-    await onConfirmPayment(paymentMode === 'cash' ? cashTendered : netPayable, false, upiRef.trim() || undefined);
+    const savedInv = await onConfirmPayment(paymentMode === 'cash' ? cashTendered : netPayable, false, upiRef.trim() || undefined);
 
-    // Format WhatsApp receipt text
+    if (savedInv) {
+      await dispatchWhatsAppReceipt({
+        invoice: savedInv,
+        shop: shopProfile,
+        settings: billingSettings,
+        printSettings
+      });
+      return;
+    }
+
+    // Format WhatsApp receipt text fallback
     const cleanPhone = (inputMobile || customerMobile || '').replace(/\D/g, '');
     const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 

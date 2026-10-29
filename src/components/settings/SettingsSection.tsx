@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Store, Save, RefreshCw, Download, Upload, ShieldCheck, Trash2,
   Printer, Receipt, FileText, CheckCircle2, Usb, Scissors, Zap, DollarSign, Info, Monitor,
-  Volume2, VolumeX, Bluetooth, ShoppingBag
+  Volume2, VolumeX, Bluetooth, ShoppingBag, MessageCircle, Image as ImageIcon
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
@@ -878,6 +878,134 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* WhatsApp & Digital Bill Dispatch Settings */}
+            <div>
+              <div className="border-b border-[#D8E1EC] pb-2 mb-3">
+                <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-[#16A34A]" />
+                  WhatsApp & Digital Bill Dispatch
+                </h3>
+              </div>
+              <p className="text-xs text-[#64748B] mb-3">
+                Select what format is dispatched when clicking the WhatsApp button at the counter or in mobile checkout.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Text Message */}
+                <div
+                  onClick={() => handleToggleBillingSetting('whatsappFormat', 'text')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    (billingForm.whatsappFormat || 'text') === 'text'
+                      ? 'border-[#16A34A] bg-[#F0FDF4] shadow-xs ring-2 ring-[#16A34A]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className={`w-4 h-4 ${(billingForm.whatsappFormat || 'text') === 'text' ? 'text-[#16A34A]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">Text Message</span>
+                      </div>
+                      {(billingForm.whatsappFormat || 'text') === 'text' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Instant itemized bill text summary prefilled in customer chat. Zero data download required for customer.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. PDF Document */}
+                <div
+                  onClick={() => handleToggleBillingSetting('whatsappFormat', 'pdf')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    billingForm.whatsappFormat === 'pdf'
+                      ? 'border-[#2563EB] bg-[#EFF6FF] shadow-xs ring-2 ring-[#2563EB]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <FileText className={`w-4 h-4 ${billingForm.whatsappFormat === 'pdf' ? 'text-[#2563EB]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">PDF Invoice</span>
+                      </div>
+                      {billingForm.whatsappFormat === 'pdf' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#2563EB]" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Generates a formal GST Tax Invoice or Thermal Receipt PDF attached directly via Web Share API or download.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Receipt Image */}
+                <div
+                  onClick={() => handleToggleBillingSetting('whatsappFormat', 'image')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    billingForm.whatsappFormat === 'image'
+                      ? 'border-[#7C3AED] bg-[#F5F3FF] shadow-xs ring-2 ring-[#7C3AED]/20'
+                      : 'border-[#D8E1EC] bg-white hover:border-[#94A3B8] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className={`w-4 h-4 ${billingForm.whatsappFormat === 'image' ? 'text-[#7C3AED]' : 'text-[#64748B]'}`} />
+                        <span className="font-extrabold text-xs text-[#0F172A]">Receipt Image</span>
+                      </div>
+                      {billingForm.whatsappFormat === 'image' && (
+                        <CheckCircle2 className="w-4 h-4 text-[#7C3AED]" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#475569] leading-relaxed">
+                      Crisp 2x retina PNG snapshot. Fast to share on mobile or paste (Ctrl+V) directly into WhatsApp Web.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* PDF / Image Style Selector (A5 vs 80mm) */}
+              {(billingForm.whatsappFormat === 'pdf' || billingForm.whatsappFormat === 'image') && (
+                <div className="mt-3 p-3.5 bg-white border border-[#D8E1EC] rounded-xl flex items-center justify-between shadow-2xs">
+                  <div>
+                    <div className="text-xs font-bold text-[#172B4D]">
+                      {billingForm.whatsappFormat === 'pdf' ? 'PDF Document Layout Style' : 'Image Receipt Layout Style'}
+                    </div>
+                    <div className="text-[11px] text-[#64748B]">
+                      Choose whether {billingForm.whatsappFormat === 'pdf' ? 'PDFs' : 'Images'} use the formal full A5 layout or 80mm thermal roll format.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-[#F1F5F9] p-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBillingSetting('whatsappPdfStyle', 'a5')}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                        (billingForm.whatsappPdfStyle || 'a5') === 'a5'
+                          ? 'bg-white text-[#2563EB] shadow-xs'
+                          : 'text-[#64748B] hover:text-[#172B4D]'
+                      }`}
+                    >
+                      A5 Official
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBillingSetting('whatsappPdfStyle', 'thermal_80mm')}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                        billingForm.whatsappPdfStyle === 'thermal_80mm'
+                          ? 'bg-white text-[#2563EB] shadow-xs'
+                          : 'text-[#64748B] hover:text-[#172B4D]'
+                      }`}
+                    >
+                      80mm Thermal
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

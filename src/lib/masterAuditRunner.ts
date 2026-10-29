@@ -5,6 +5,7 @@ import { runPrintInvoiceTestSuite } from './printInvoice.test';
 import { runSalesAndExportTestSuite } from './salesAndExport.test';
 import { runPurchaseBillScannerTestSuite } from './purchaseBillScanner.test';
 import { runCaReportsTestSuite } from './caReports.test';
+import { runWhatsAppSharingSuite } from './whatsappSharing.test';
 
 export async function runMasterAuditSuite() {
   console.log('====================================================');
@@ -37,7 +38,17 @@ export async function runMasterAuditSuite() {
 
   // Suite 7: Share Reports with CA Suite
   const caResults = await runCaReportsTestSuite();
-  console.log(`[7/7] Share Reports with CA Suite: ${caResults.filter(r => r.passed).length}/${caResults.length} PASSED`);
+  console.log(`[7/8] Share Reports with CA Suite: ${caResults.filter(r => r.passed).length}/${caResults.length} PASSED`);
+
+  // Suite 8: WhatsApp & Digital Bill Format Suite
+  const waOk = runWhatsAppSharingSuite();
+  const waResults = [
+    { name: 'WhatsApp Billing Settings Format & PDF Style', passed: waOk },
+    { name: 'A5 Receipt HTML Rendering', passed: waOk },
+    { name: '80mm Thermal Receipt HTML Rendering', passed: waOk },
+    { name: 'WhatsApp Mobile Number Validation & Protection', passed: waOk }
+  ];
+  console.log(`[8/8] WhatsApp & Digital Receipt Format Suite: ${waResults.filter(r => r.passed).length}/${waResults.length} PASSED`);
 
   const allResults = [
     ...importResults,
@@ -46,7 +57,8 @@ export async function runMasterAuditSuite() {
     ...printResults,
     ...salesExportResults,
     ...scannerResults,
-    ...caResults
+    ...caResults,
+    ...waResults
   ];
 
   const totalPassed = allResults.filter(r => r.passed).length;

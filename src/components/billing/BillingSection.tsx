@@ -22,6 +22,7 @@ import { KeyboardBadge } from '../common/KeyboardBadge';
 import type { Product, Invoice, InvoiceType, Customer } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import { triggerA5Print, triggerInvoicePrint, openWhatsAppReceipt } from '../../lib/print';
+import { dispatchWhatsAppReceipt } from '../../lib/whatsappDispatcher';
 import { getSupabaseClient } from '../../lib/supabase';
 import { useKeyboardShortcuts } from '../../utils/keyboard';
 import { playBeep, playError, playCashChime } from '../../utils/audio';
@@ -472,8 +473,10 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
         setCompletedInvoice(inv);
         setIsPreviewOpen(true);
       }
+      return inv;
     } catch (err: any) {
       onToast('error', 'Failed to Save Invoice', err.message || 'Server connection error. Cart preserved.');
+      return null;
     } finally {
       setIsSubmitting(false);
     }
@@ -533,8 +536,13 @@ export const BillingSection: React.FC<BillingSectionProps> = ({ onToast, onOpenA
         triggerInvoicePrint(inv, shopProfile, printSettings);
         onToast('success', `Bill #${inv.invoiceNumber} Saved & Printed!`, `Total: ₹${inv.netPayable.toLocaleString('en-IN')}`);
       } else if (shareWhatsApp) {
-        openWhatsAppReceipt(inv, shopProfile);
-        onToast('success', `Bill #${inv.invoiceNumber} Saved & Shared!`, 'WhatsApp opened with bill');
+        await dispatchWhatsAppReceipt({
+          invoice: inv,
+          shop: shopProfile,
+          settings: billingSettings,
+          printSettings,
+          onToast
+        });
       } else {
         onToast('success', `Bill #${inv.invoiceNumber} Saved!`, `Net Payable: ₹${inv.netPayable.toLocaleString('en-IN')}`);
       }

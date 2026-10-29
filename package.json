@@ -58,6 +58,8 @@
     "clsx": "^2.1.1",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.54.0",
     "pdf-parse": "^2.4.5",
     "react": "^19.2.8",
@@ -69,6 +71,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/html2canvas": "^0.5.35",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

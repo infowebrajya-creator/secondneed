@@ -75,7 +75,9 @@ export const DEFAULT_BILLING_SETTINGS: BillingSettings = {
   enableBos: false,
   enableChallan: false,
   enableEstimate: false,
-  enableIgst: true
+  enableIgst: true,
+  whatsappFormat: 'text',
+  whatsappPdfStyle: 'a5'
 };
 
 export const DEFAULT_SUPABASE_CONFIG: SupabaseConfig = {

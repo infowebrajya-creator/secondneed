@@ -3,6 +3,8 @@ import { Printer, Receipt, FileText, Share2, Smartphone } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Invoice, ShopProfile, PrintSettings, PaperSize, PrintCopyType } from '../../types';
 import { triggerInvoicePrint } from '../../lib/print';
+import { dispatchWhatsAppReceipt } from '../../lib/whatsappDispatcher';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { A5PrintInvoice } from './A5PrintInvoice';
 import { Thermal80mmInvoice } from './Thermal80mmInvoice';
 import { Thermal58mmInvoice } from './Thermal58mmInvoice';
@@ -22,6 +24,7 @@ export const A5PrintPreviewModal: React.FC<A5PrintPreviewModalProps> = ({
   shopProfile,
   printSettings
 }) => {
+  const { billingSettings } = useSettingsStore();
   const [selectedSize, setSelectedSize] = useState<PaperSize>(printSettings?.paperSize || 'A5');
   const [selectedCopy, setSelectedCopy] = useState<PrintCopyType>(invoice?.copyType || 'original');
 
@@ -41,42 +44,14 @@ export const A5PrintPreviewModal: React.FC<A5PrintPreviewModalProps> = ({
     triggerInvoicePrint(invoice, shopProfile, { ...printSettings, paperSize: selectedSize }, selectedCopy);
   };
 
-  const handleShareWhatsApp = () => {
-    const cleanPhone = (invoice.customerMobile || '').replace(/\D/g, '');
-    const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const isQuotation = invoice.invoiceType === 'quotation';
-    const headerTitle = isQuotation ? 'QUOTATION / ESTIMATE' : 'TAX INVOICE';
-
-    const receiptMessage = [
-      `🧾 *${headerTitle}: #${invoice.invoiceNumber}*`,
-      `*${shopProfile.shopName.toUpperCase()}*`,
-      `${shopProfile.address}`,
-      shopProfile.gstin ? `GSTIN: ${shopProfile.gstin}` : '',
-      shopProfile.phone ? `Phone: ${shopProfile.phone}` : '',
-      `--------------------------------`,
-      `*Customer:* ${invoice.customerName}`,
-      `*Date:* ${invoice.date} ${invoice.time || ''}`,
-      `--------------------------------`,
-      ...invoice.items.map(
-        (it) =>
-          `• ${it.productName} x ${it.qty} ${it.unit || 'Pcs'} = ₹${it.totalAmount.toFixed(2)}`
-      ),
-      `--------------------------------`,
-      `*Total Payable:* ₹${invoice.netPayable.toLocaleString('en-IN')}`,
-      `*Payment Mode:* ${invoice.paymentMode.toUpperCase()}`,
-      invoice.balanceAmount > 0 
-        ? `*Outstanding Khata:* ₹${invoice.balanceAmount.toLocaleString('en-IN')}` 
-        : isQuotation ? 'ℹ️ *Valid for 15 Days*' : '✅ *Status: Paid in Full*',
-      `--------------------------------`,
-      shopProfile.upiId ? `*UPI ID for payment:* ${shopProfile.upiId}` : '',
-      `Thank you for doing business with us!`
-    ].filter(Boolean).join('\n');
-
-    const whatsappUrl = targetPhone
-      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(receiptMessage)}`
-      : `https://wa.me/?text=${encodeURIComponent(receiptMessage)}`;
-
-    window.open(whatsappUrl, '_blank');
+  const handleShareWhatsApp = async () => {
+    if (!invoice) return;
+    await dispatchWhatsAppReceipt({
+      invoice,
+      shop: shopProfile,
+      settings: billingSettings,
+      printSettings: { ...printSettings, paperSize: selectedSize }
+    });
   };
 
   return (

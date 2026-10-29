@@ -179,6 +179,9 @@ export interface PrintSettings {
   autoPrintOnSave: boolean;
 }
 
+export type WhatsAppReceiptFormat = 'text' | 'pdf' | 'image';
+export type WhatsAppPdfStyle = 'a5' | 'thermal_80mm';
+
 export interface BillingSettings {
   defaultInvoiceType: 'gst' | 'simple';
   showAdvancedModes: boolean;
@@ -186,6 +189,8 @@ export interface BillingSettings {
   enableChallan: boolean;
   enableEstimate: boolean;
   enableIgst: boolean;
+  whatsappFormat: WhatsAppReceiptFormat;
+  whatsappPdfStyle: WhatsAppPdfStyle;
 }
 
 export interface SupabaseConfig {

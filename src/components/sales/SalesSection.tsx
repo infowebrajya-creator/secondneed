@@ -11,6 +11,7 @@ import { Badge } from '../common/Badge';
 import { Invoice, PaymentMode, InvoiceType, InvoiceStatus } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { triggerA5Print } from '../../lib/print';
+import { dispatchWhatsAppReceipt } from '../../lib/whatsappDispatcher';
 import { db } from '../../lib/db';
 import { 
   exportProductsCSV, exportInvoiceHeadersCSV, exportInvoiceItemsCSV, 
@@ -34,7 +35,7 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
   } = useSalesStore();
 
   const { products, loadProducts } = useProductStore();
-  const { shopProfile, printSettings } = useSettingsStore();
+  const { shopProfile, printSettings, billingSettings } = useSettingsStore();
 
   // Additional Filter State
   const [billTypeFilter, setBillTypeFilter] = useState<InvoiceType | 'all'>('all');
@@ -244,30 +245,14 @@ export const SalesSection: React.FC<SalesSectionProps> = ({ onToast, onNavigateT
     }
   };
 
-  const handleShareWhatsApp = (inv: Invoice) => {
-    const cleanPhone = (inv.customerMobile || '').replace(/\D/g, '');
-    const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const receiptMessage = [
-      `🧾 *TAX INVOICE - ${shopProfile.shopName.toUpperCase()}*`,
-      `Invoice: #${inv.invoiceNumber}`,
-      `Date: ${formatDate(inv.date)} ${inv.time || ''}`,
-      `Customer: ${inv.customerName || 'Valued Customer'}`,
-      `Payment: ${inv.paymentMode.toUpperCase()}`,
-      `--------------------------------`,
-      ...inv.items.slice(0, 15).map((it, idx) => `${idx + 1}. ${it.productName} (${it.qty} ${it.unit}) = ₹${(it.totalAmount || (it.unitRate * it.qty)).toFixed(2)}`),
-      inv.items.length > 15 ? `...and ${inv.items.length - 15} more item(s)` : '',
-      `--------------------------------`,
-      `*GRAND TOTAL: ₹${inv.netPayable.toFixed(2)}*`,
-      inv.notes ? `Note: ${inv.notes}` : '',
-      `--------------------------------`,
-      `Thank you for your business! 🙏`
-    ].filter(Boolean).join('\n');
-
-    const waUrl = targetPhone 
-      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(receiptMessage)}`
-      : `https://wa.me/?text=${encodeURIComponent(receiptMessage)}`;
-
-    window.open(waUrl, '_blank');
+  const handleShareWhatsApp = async (inv: Invoice) => {
+    await dispatchWhatsAppReceipt({
+      invoice: inv,
+      shop: shopProfile,
+      settings: billingSettings,
+      printSettings,
+      onToast
+    });
   };
 
   const handleExportStockMovements = async () => {

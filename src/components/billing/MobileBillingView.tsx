@@ -894,15 +894,31 @@ export const MobileBillingView: React.FC<MobileBillingViewProps> = ({
               triggerHaptic(20);
               onFastSaveBill?.({ shouldPrint: false, shareWhatsApp: true });
             }}
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all shadow-2xs ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all shadow-2xs relative ${
               hasValidMobile && items.length > 0
                 ? 'bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#128C7E] border border-[#25D366]/50 cursor-pointer active:scale-95'
                 : 'bg-gray-100 text-gray-300 border border-gray-200 cursor-not-allowed opacity-50'
             }`}
-            title={hasValidMobile ? `Save & Send Bill to ${customerMobile} on WhatsApp` : 'Enter customer mobile number to enable WhatsApp bill share'}
+            title={
+              hasValidMobile
+                ? `Save & Send ${billingSettings?.whatsappFormat === 'pdf' ? 'PDF' : billingSettings?.whatsappFormat === 'image' ? 'Image' : 'Text'} Bill to ${customerMobile} on WhatsApp`
+                : 'Enter customer mobile number to enable WhatsApp bill share'
+            }
             aria-label="Save and Share on WhatsApp"
           >
-            <MessageSquare className="w-4 h-4" />
+            <div className="relative flex items-center justify-center">
+              <MessageSquare className="w-4 h-4" />
+              {billingSettings?.whatsappFormat === 'pdf' && (
+                <span className="absolute -top-2 -right-2 text-[7px] font-black bg-blue-600 text-white rounded px-0.5 leading-none py-0.5 shadow-2xs">
+                  PDF
+                </span>
+              )}
+              {billingSettings?.whatsappFormat === 'image' && (
+                <span className="absolute -top-2 -right-2 text-[7px] font-black bg-purple-600 text-white rounded px-0.5 leading-none py-0.5 shadow-2xs">
+                  IMG
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Settle Bill Button */}

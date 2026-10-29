@@ -33,6 +33,12 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
   if (printSettings?.paperSize === '80mm' || printSettings?.paperSize === 'Thermal') {
     return trigger80mmPrint(invoice, shop, printSettings, copyType);
   }
+  const isA4 = printSettings?.paperSize === 'A4';
+  const html = generateA5ReceiptHtml(invoice, shop, printSettings, copyType);
+  executeBrowserPrint(html, isA4 ? 900 : 800, 950);
+}
+
+export function generateA5ReceiptHtml(invoice: Invoice, shop: ShopProfile, printSettings?: PrintSettings, copyType?: PrintCopyType): string {
   const isGstInvoice = invoice.invoiceType === 'gst';
   const isBillOfSupply = invoice.invoiceType === 'bill_of_supply';
   const isChallan = invoice.invoiceType === 'delivery_challan';
@@ -112,9 +118,9 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
         </td>
         <td style="text-align: center; border-right: 1px solid #000; font-family: monospace; font-size: 7px;">${hsnLabel}</td>
         <td style="text-align: center; border-right: 1px solid #000; font-size: 7px; text-transform: uppercase;">${unitLabel}</td>
-        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${item.qty.toFixed(2)}</td>
-        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${item.unitRate.toFixed(2)}</td>
-        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${item.mrp.toFixed(2)}</td>
+        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${(item.qty || 0).toFixed(2)}</td>
+        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${(item.unitRate || 0).toFixed(2)}</td>
+        <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${(item.mrp || item.unitRate || 0).toFixed(2)}</td>
         <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${(item.discountPct || 0).toFixed(2)}</td>
         <td style="text-align: right; border-right: 1px solid #000; padding-right: 2px; font-family: monospace;">${taxableVal.toFixed(2)}</td>
         <td style="text-align: right; padding-right: 3px; font-family: monospace; font-weight: 700;">${itemTotal.toFixed(2)}</td>
@@ -614,7 +620,7 @@ export function triggerA5Print(invoice: Invoice, shop: ShopProfile, printSetting
     </html>
   `;
 
-  executeBrowserPrint(html, isA4 ? 900 : 800, 950);
+  return html;
 }
 
 function executeBrowserPrint(html: string, popupWidth = 800, popupHeight = 950, is80mm = false) {
