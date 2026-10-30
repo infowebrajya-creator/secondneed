@@ -294,10 +294,11 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         if (err.path[0]) errors[err.path[0].toString()] = err.message;
       });
       setProfileErrors(errors);
-      onToast('error', 'Validation Notice', 'Some fields may not match standard format');
-    } else {
-      setProfileErrors({});
+      const firstError = result.error.issues[0]?.message || 'Please check required fields';
+      onToast('error', 'Validation Notice', firstError);
+      return;
     }
+    setProfileErrors({});
     setSaveStatus('saving');
     await saveShopProfile(profileForm);
     setIsDirty(false);
@@ -686,6 +687,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
+                {profileErrors.address && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.address}</p>}
               </div>
 
               <div>
@@ -697,17 +699,48 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                 />
+                {profileErrors.phone && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.phone}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">GSTIN (15 Digits) *</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  GSTIN (15 Digits) <span className="text-[11px] font-normal text-[#64748B]">(Optional for Non-GST)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.gstin}
                   onChange={(e) => handleProfileChange('gstin', e.target.value.toUpperCase())}
                   onBlur={handleProfileBlur}
+                  placeholder="e.g. 23AAAAA0000A1Z5 (Leave blank if non-GST)"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] uppercase font-bold text-[#B45309] font-mono"
                 />
+                {profileErrors.gstin && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.gstin}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">State / Union Territory</label>
+                <input
+                  type="text"
+                  value={profileForm.state || ''}
+                  onChange={(e) => handleProfileChange('state', e.target.value)}
+                  onBlur={handleProfileBlur}
+                  placeholder="e.g. Madhya Pradesh (23)"
+                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
+                />
+                {profileErrors.state && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.state}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">Pincode</label>
+                <input
+                  type="text"
+                  value={profileForm.pincode || ''}
+                  onChange={(e) => handleProfileChange('pincode', e.target.value)}
+                  onBlur={handleProfileBlur}
+                  placeholder="e.g. 480661"
+                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
+                />
+                {profileErrors.pincode && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.pincode}</p>}
               </div>
 
               <div>
@@ -719,6 +752,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   onBlur={handleProfileBlur}
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                 />
+                {profileErrors.invoicePrefix && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.invoicePrefix}</p>}
               </div>
 
               <div>

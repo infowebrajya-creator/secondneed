@@ -217,7 +217,14 @@ export function App() {
 
   const addToast = (type: 'success' | 'error' | 'info', title: string, description?: string) => {
     const id = 'toast_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
-    setToasts((prev) => [...prev, { id, type, title, description }]);
+    setToasts((prev) => {
+      // Avoid stacking duplicate toast messages
+      const isDuplicate = prev.some(t => t.title === title && t.description === description);
+      if (isDuplicate) return prev;
+      // Keep maximum 3 visible toasts on screen
+      const trimmed = prev.length >= 3 ? prev.slice(-2) : prev;
+      return [...trimmed, { id, type, title, description }];
+    });
   };
 
   const dismissToast = (id: string) => {
