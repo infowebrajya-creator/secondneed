@@ -310,8 +310,22 @@ export const useSalesStore = create<SalesState>((set, get) => ({
           // Load local Dexie storage
           const localInvoices = await db.invoices.toArray().catch(() => []);
 
+          // Purge any local test artifacts or ghost test invoices
+          const isTestInvoice = (i: Invoice) =>
+            i.customerName === 'Buyer 1' ||
+            i.customerName === 'Buyer 2' ||
+            i.customerName === 'Return Customer' ||
+            i.customerName === 'Double Clicker' ||
+            (i.idempotencyKey && (i.idempotencyKey.startsWith('idem_') || i.idempotencyKey.startsWith('test_')));
+
+          const localTestInvs = localInvoices.filter(isTestInvoice);
+          if (localTestInvs.length > 0) {
+            await db.invoices.bulkDelete(localTestInvs.map((t) => t.id)).catch(() => {});
+          }
+
           // Purge stale ghost/test invoices that are marked synced but do not exist in current Supabase DB
-          const staleSynced = localInvoices.filter((i) => i.synced && !remoteIdSet.has(i.id));
+          const remainingLocal = localInvoices.filter((i) => !isTestInvoice(i));
+          const staleSynced = remainingLocal.filter((i) => i.synced && !remoteIdSet.has(i.id));
           if (staleSynced.length > 0) {
             await db.invoices.bulkDelete(staleSynced.map(s => s.id)).catch(() => {});
           }
@@ -322,7 +336,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
           }
 
           // Only keep truly unsynced pending local invoices (created offline, synced !== true)
-          const genuinelyPendingLocal = localInvoices.filter((i) => !i.synced && !remoteIdSet.has(i.id));
+          const genuinelyPendingLocal = remainingLocal.filter((i) => !i.synced && !remoteIdSet.has(i.id));
 
           const combined = [...genuinelyPendingLocal, ...mapped].sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

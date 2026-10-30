@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { db } from './db';
+import { disableCloudSyncForTests } from './supabase';
 import { useSalesStore } from '../store/useSalesStore';
 import type { InvoiceItem, Product } from '../types';
 import { calculateItemTaxes } from './taxCalculator';
@@ -11,6 +12,7 @@ export interface WorkflowTestResult {
 }
 
 export async function runPaymentWorkflowTestSuite(): Promise<WorkflowTestResult[]> {
+  disableCloudSyncForTests();
   const results: WorkflowTestResult[] = [];
   const salesStore = useSalesStore.getState();
 

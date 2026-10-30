@@ -542,8 +542,8 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             <div className="bg-white border border-[#D8E1EC] rounded-2xl p-8 text-center text-[#64748B] shadow-xs">
               <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
               <div className="font-bold text-[#172B4D]">No products found</div>
-              <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">
-                Seed Sample Catalog Items
+              <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className="mt-2 text-xs text-[#2563EB] hover:underline font-bold cursor-pointer">
+                + Add New Product
               </button>
             </div>
           ) : (
@@ -686,7 +686,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                     <td colSpan={11} className="py-16 text-center text-[#64748B]">
                       <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
                       <div className="font-bold text-[#172B4D]">No products found matching criteria</div>
-                      <button onClick={handleSeed} className="mt-2 text-xs text-[#2563EB] underline font-bold cursor-pointer">Seed Sample Catalog Items</button>
+                      <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className="mt-2 text-xs text-[#2563EB] hover:underline font-bold cursor-pointer">+ Add New Product</button>
                     </td>
                   </tr>
                 ) : (
@@ -909,7 +909,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-bold"
-                placeholder="e.g. Classmate Notebook A4 200 Pgs"
+                placeholder="e.g. Cotton Casual Shirt Slim Fit (Size 40)"
               />
               {formErrors.name && <p className="text-[11px] text-[#B91C1C] font-mono mt-0.5">{formErrors.name}</p>}
             </div>
@@ -932,14 +932,14 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-[#172B4D] mb-1">
-                Pack Info <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                Pack / Size Info <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
               </label>
               <input
                 type="text"
                 value={formData.packInfo}
                 onChange={(e) => setFormData({ ...formData, packInfo: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
-                placeholder="e.g. Pack of 10, 500 Sheets"
+                placeholder="e.g. Size 32, Size L, Pack of 3"
               />
             </div>
 

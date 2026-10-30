@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { db } from './db';
+import { disableCloudSyncForTests } from './supabase';
 import { runMasterAuditSuite } from './masterAuditRunner';
 import { ShopProfileSchema } from '../utils/validation';
 import { numberToWordsIndian } from '../utils/numberToWords';
@@ -22,6 +23,7 @@ export async function runHardcoreProductionAudit(): Promise<{
   passRate: number;
   results: TestResult[];
 }> {
+  disableCloudSyncForTests();
   const results: TestResult[] = [];
 
   const record = (suite: string, name: string, condition: boolean, message?: string) => {

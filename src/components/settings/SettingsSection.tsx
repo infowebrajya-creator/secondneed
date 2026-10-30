@@ -8,6 +8,7 @@ import {
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useProductStore } from '../../store/useProductStore';
 import { useSalesStore } from '../../store/useSalesStore';
+import { useCustomerStore } from '../../store/useCustomerStore';
 import { ShopProfileSchema } from '../../utils/validation';
 import { PaperSize, PrintEngine, BillingSettings } from '../../types';
 import { PwaInstallModal } from '../common/PwaInstallModal';
@@ -397,11 +398,12 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
   };
 
   const handleClearDemoData = async () => {
-    if (confirm('Are you sure you want to delete all demo data (products, invoices, stock movements, and drafts)? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete all demo data and reset local cache? This will clear all local demo products, invoices, and customers, and resync cleanly with Supabase.')) {
       await clearAllDemoData();
-      await loadProducts();
+      await loadProducts(true);
       await loadInvoices();
-      onToast('success', 'Demo Data Deleted', 'All products, sales history, stock movements, and drafts have been cleared.');
+      await useCustomerStore.getState().loadCustomers(true);
+      onToast('success', 'Demo Data Cleared & Cloud Resynced', 'Clean state synchronized with Supabase.');
     }
   };
 
@@ -1787,14 +1789,27 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </label>
             </div>
 
-            <div className="p-4 bg-[#FEE2E2] border border-[#FCA5A5] rounded-xl space-y-3">
-              <div className="font-bold text-[#B91C1C]">Purge All Demo Data</div>
-              <p className="text-[11px] text-[#B91C1C]/80">Permanently delete all sample products, demo sales history, stock movements, and draft bills from database.</p>
+            <div className="p-4 bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl space-y-3">
+              <div className="font-bold text-[#1E40AF]">Reset Local Cache & Re-Sync with Cloud</div>
+              <p className="text-[11px] text-[#1E40AF]/80">If another phone or computer shows different stock or products, tap here to wipe local temporary cache and re-download clean master data from Supabase.</p>
               <button
+                type="button"
+                onClick={handleClearDemoData}
+                className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" /> Reset Local Cache & Force Cloud Sync
+              </button>
+            </div>
+
+            <div className="p-4 bg-[#FEE2E2] border border-[#FCA5A5] rounded-xl space-y-3">
+              <div className="font-bold text-[#B91C1C]">Purge All Local Demo Data</div>
+              <p className="text-[11px] text-[#B91C1C]/80">Permanently wipe all local products, invoices, stock records, and customers from this device and reload a clean state.</p>
+              <button
+                type="button"
                 onClick={handleClearDemoData}
                 className="px-4 py-2 bg-[#B91C1C] hover:bg-[#991B1B] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
-                <Trash2 className="w-4 h-4" /> Delete All Demo Data
+                <Trash2 className="w-4 h-4" /> Delete All Local Data
               </button>
             </div>
           </div>

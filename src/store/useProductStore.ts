@@ -27,59 +27,25 @@ interface ProductState {
   syncWithSupabase: () => Promise<{ success: boolean; message: string }>;
 }
 
-export const STATIONERY_CATEGORIES = [
+export const CLOTHING_CATEGORIES = [
   'All Categories',
-  'Pens',
-  'Pencils',
-  'Erasers & Sharpeners',
-  'Notebooks & Registers',
-  'Paper & Sheets',
-  'Files & Folders',
-  'Office Supplies',
-  'School Supplies',
-  'Art & Craft',
-  'Markers & Highlighters',
-  'Drawing & Geometry',
-  'Adhesives',
-  'Calculators',
-  'Books & Publications',
-  'Bags & Accessories',
-  'Files & Office Paper',
-  'Printer & Computer Supplies',
-  'Gift & Fancy Items',
-  'Toys & Games',
-  'Bottles & Lunch Boxes',
+  'Shirts & Casuals',
+  'T-Shirts & Polos',
+  'Jeans & Denims',
+  'Trousers & Chinos',
+  'Formal & Suiting',
+  'Ethnic & Kurta',
+  'Winterwear & Jackets',
+  'Innerwear & Loungewear',
+  'Belts & Accessories',
+  'Footwear',
   'General Merchandise',
   'Uncategorized'
 ];
 
-export const INITIAL_STATIONERY_PRODUCTS: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[] = [
-  { sku: 'CLM-NB-172', barcode: '8901030678901', name: 'Classmate Long Book Unruled 172 Pgs', category: 'Notebooks & Registers', packInfo: '1 Pcs', unit: 'Pcs', mrp: 75, purchaseRate: 50, saleRate: 70, hsnCode: '4820', gstRate: 12, taxType: 'inclusive', stockQty: 120, minStockLevel: 20, isActive: true },
-  { sku: 'CLM-NB-A4-200', barcode: '8901030678902', name: 'Classmate Spiral Notebook A4 200 Pgs', category: 'Notebooks & Registers', packInfo: '1 Pcs', unit: 'Pcs', mrp: 140, purchaseRate: 95, saleRate: 130, hsnCode: '4820', gstRate: 12, taxType: 'inclusive', stockQty: 85, minStockLevel: 15, isActive: true },
-  { sku: 'REY-TRM-BLU', barcode: '8901234000012', name: 'Reynolds Trimax Gel Pen Blue', category: 'Pens & Writing', packInfo: '1 Pcs', unit: 'Pcs', mrp: 60, purchaseRate: 42, saleRate: 55, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 200, minStockLevel: 30, isActive: true },
-  { sku: 'REY-TRM-BLK', barcode: '8901234000013', name: 'Reynolds Trimax Gel Pen Black', category: 'Pens & Writing', packInfo: '1 Pcs', unit: 'Pcs', mrp: 60, purchaseRate: 42, saleRate: 55, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 150, minStockLevel: 25, isActive: true },
-  { sku: 'HAU-XO-5PKT', barcode: '8901234000020', name: 'Hauser XO Ball Pen Blue (Pack of 5)', category: 'Pens & Writing', packInfo: 'Pack of 5', unit: 'Pkt', mrp: 50, purchaseRate: 35, saleRate: 45, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 90, minStockLevel: 10, isActive: true },
-  { sku: 'PEN-ENG-07', barcode: '8901234000030', name: 'Pentel EnerGel 0.7mm Liquid Gel Pen', category: 'Pens & Writing', packInfo: '1 Pcs', unit: 'Pcs', mrp: 50, purchaseRate: 34, saleRate: 48, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 60, minStockLevel: 10, isActive: true },
-  { sku: 'JK-A4-75GSM', barcode: '8902345000011', name: 'JK Copier A4 Paper 75 GSM (500 Sheets)', category: 'Paper & Pads', packInfo: '1 Ream', unit: 'Ream', mrp: 340, purchaseRate: 255, saleRate: 310, hsnCode: '4802', gstRate: 12, taxType: 'inclusive', stockQty: 45, minStockLevel: 10, isActive: true },
-  { sku: 'B2B-A4-80GSM', barcode: '8902345000022', name: 'B2B Copier Paper A4 80 GSM', category: 'Paper & Pads', packInfo: '1 Ream', unit: 'Ream', mrp: 380, purchaseRate: 285, saleRate: 350, hsnCode: '4802', gstRate: 12, taxType: 'inclusive', stockQty: 30, minStockLevel: 8, isActive: true },
-  { sku: 'FEV-MR-100G', barcode: '8901084001001', name: 'Fevicol MR Squeezy Bottle 100g', category: 'Adhesives & Tapes', packInfo: '100g Bottle', unit: 'Pcs', mrp: 50, purchaseRate: 36, saleRate: 45, hsnCode: '3506', gstRate: 18, taxType: 'inclusive', stockQty: 110, minStockLevel: 15, isActive: true },
-  { sku: 'FEV-STK-15G', barcode: '8901084002002', name: 'Fevistick Glue Stick 15g', category: 'Adhesives & Tapes', packInfo: '15g Stick', unit: 'Pcs', mrp: 30, purchaseRate: 21, saleRate: 28, hsnCode: '3506', gstRate: 18, taxType: 'inclusive', stockQty: 140, minStockLevel: 20, isActive: true },
-  { sku: 'FBC-WCP-24', barcode: '8901532001234', name: 'Faber-Castell 24 Tri-Grip Water Color Pencils', category: 'Art & Craft', packInfo: '24 Shades Set', unit: 'Set', mrp: 220, purchaseRate: 150, saleRate: 200, hsnCode: '9609', gstRate: 12, taxType: 'inclusive', stockQty: 40, minStockLevel: 5, isActive: true },
-  { sku: 'CAM-ACR-12', barcode: '8901532005678', name: 'Camlin Kokuyo Acrylic Colors 12 Shades', category: 'Art & Craft', packInfo: '12 Tubes Set', unit: 'Set', mrp: 280, purchaseRate: 195, saleRate: 260, hsnCode: '3213', gstRate: 18, taxType: 'inclusive', stockQty: 35, minStockLevel: 5, isActive: true },
-  { sku: 'SOL-COB-A4', barcode: '8903456000015', name: 'Solo Cobra Executive File A4', category: 'Files & Folders', packInfo: '1 Pcs', unit: 'Pcs', mrp: 85, purchaseRate: 55, saleRate: 75, hsnCode: '3926', gstRate: 18, taxType: 'inclusive', stockQty: 75, minStockLevel: 10, isActive: true },
-  { sku: 'SOL-DSP-20', barcode: '8903456000026', name: 'Solo Display File 20 Pockets A4', category: 'Files & Folders', packInfo: '20 Pockets', unit: 'Pcs', mrp: 150, purchaseRate: 100, saleRate: 135, hsnCode: '3926', gstRate: 18, taxType: 'inclusive', stockQty: 50, minStockLevel: 10, isActive: true },
-  { sku: 'CAS-MJ12D', barcode: '4971850123456', name: 'Casio MJ-12D Desktop Calculator 150 Steps', category: 'Calculators & Instruments', packInfo: '1 Box', unit: 'Pcs', mrp: 550, purchaseRate: 410, saleRate: 510, hsnCode: '8470', gstRate: 18, taxType: 'inclusive', stockQty: 25, minStockLevel: 5, isActive: true },
-  { sku: 'CAM-MDB-BOX', barcode: '8901532009999', name: 'Camel Mathematical Drawing Instruments Box', category: 'Calculators & Instruments', packInfo: '1 Box', unit: 'Box', mrp: 130, purchaseRate: 88, saleRate: 115, hsnCode: '9017', gstRate: 18, taxType: 'inclusive', stockQty: 60, minStockLevel: 10, isActive: true },
-  { sku: 'NAT-621-10PKT', barcode: '8901234567012', name: 'Nataraj 621 Bold Pencils (Pack of 10)', category: 'Pens & Writing', packInfo: 'Pack of 10', unit: 'Pkt', mrp: 60, purchaseRate: 42, saleRate: 55, hsnCode: '9609', gstRate: 12, taxType: 'inclusive', stockQty: 180, minStockLevel: 25, isActive: true },
-  { sku: 'APS-PLT-10PKT', barcode: '8901234567023', name: 'Apsara Platinum Extra Dark Pencils (Pack of 10)', category: 'Pens & Writing', packInfo: 'Pack of 10', unit: 'Pkt', mrp: 70, purchaseRate: 49, saleRate: 65, hsnCode: '9609', gstRate: 12, taxType: 'inclusive', stockQty: 160, minStockLevel: 20, isActive: true },
-  { sku: 'PST-STK-3X3', barcode: '8904567000010', name: 'Post-it Sticky Notes 3x3 Yellow (100 Sheets)', category: 'Desk Accessories', packInfo: '100 Sheets Pad', unit: 'Pad', mrp: 65, purchaseRate: 44, saleRate: 58, hsnCode: '4820', gstRate: 18, taxType: 'inclusive', stockQty: 95, minStockLevel: 15, isActive: true },
-  { sku: 'KNG-STP-10D', barcode: '8906000000011', name: 'Kangaro Stapler HD-10D', category: 'Desk Accessories', packInfo: '1 Pcs', unit: 'Pcs', mrp: 95, purchaseRate: 68, saleRate: 85, hsnCode: '8305', gstRate: 18, taxType: 'inclusive', stockQty: 65, minStockLevel: 10, isActive: true },
-  { sku: 'KNG-PIN-10BOX', barcode: '8906000000022', name: 'Kangaro Staple Pins No.10 (Box of 20)', category: 'Desk Accessories', packInfo: 'Box of 20', unit: 'Box', mrp: 120, purchaseRate: 84, saleRate: 105, hsnCode: '8305', gstRate: 18, taxType: 'inclusive', stockQty: 40, minStockLevel: 8, isActive: true },
-  { sku: 'WND-CEL-1IN', barcode: '8907000000015', name: 'Wonder Cello Tape 1 inch Clear (Pack of 6)', category: 'Adhesives & Tapes', packInfo: 'Pack of 6', unit: 'Pkt', mrp: 90, purchaseRate: 60, saleRate: 80, hsnCode: '3919', gstRate: 18, taxType: 'inclusive', stockQty: 70, minStockLevel: 12, isActive: true },
-  { sku: 'FBC-HLT-4SET', barcode: '8901532004444', name: 'Faber-Castell Textliner 38 Highlighter Set of 4', category: 'Pens & Writing', packInfo: 'Set of 4', unit: 'Set', mrp: 120, purchaseRate: 82, saleRate: 108, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 55, minStockLevel: 10, isActive: true },
-  { sku: 'LUX-MRK-BLK', barcode: '8901234888888', name: 'Luxor Permanent Marker Black', category: 'Pens & Writing', packInfo: '1 Pcs', unit: 'Pcs', mrp: 30, purchaseRate: 20, saleRate: 27, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 130, minStockLevel: 20, isActive: true },
-  { sku: 'CAM-WBM-BLU', barcode: '8901532777777', name: 'Camlin Whiteboard Marker Blue', category: 'Pens & Writing', packInfo: '1 Pcs', unit: 'Pcs', mrp: 35, purchaseRate: 24, saleRate: 32, hsnCode: '9608', gstRate: 18, taxType: 'inclusive', stockQty: 140, minStockLevel: 20, isActive: true }
-];
+export const STATIONERY_CATEGORIES = CLOTHING_CATEGORIES;
+
+export const INITIAL_STATIONERY_PRODUCTS: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>[] = [];
 
 let productRealtimeSubscribed = false;
 
@@ -197,6 +163,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
           }
         }
 
+        const currentLocal = await db.products.toArray().catch(() => []);
+
         if (allData.length > 0) {
           const mappedProducts: Product[] = allData.map((item: any) => ({
             id: item.id || item.sku,
@@ -220,9 +188,16 @@ export const useProductStore = create<ProductState>((set, get) => ({
             synced: true
           }));
 
-          // Non-destructive differential merge: Preserve local unsynced offline products
-          const currentLocal = await db.products.toArray().catch(() => []);
-          const unsyncedLocal = currentLocal.filter((p) => !p.synced);
+          const remoteIdSet = new Set(mappedProducts.map((p) => p.id));
+          
+          // Purge stale local products that were synced previously but are now deleted from Supabase
+          const staleLocal = currentLocal.filter((p) => p.synced && !remoteIdSet.has(p.id));
+          if (staleLocal.length > 0) {
+            await db.products.bulkDelete(staleLocal.map((p) => p.id)).catch(() => {});
+          }
+
+          // Preserve only truly unsynced offline products
+          const unsyncedLocal = currentLocal.filter((p) => !p.synced && !remoteIdSet.has(p.id));
 
           await db.products.bulkPut(mappedProducts);
           if (unsyncedLocal.length > 0) {
@@ -230,6 +205,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
           }
           const allMerged = await db.products.toArray();
           set({ products: allMerged, isLoading: false });
+          return;
+        } else {
+          // Cloud catalog is empty (clean slate) - Purge local synced/demo products
+          const staleLocal = currentLocal.filter((p) => p.synced);
+          if (staleLocal.length > 0) {
+            await db.products.bulkDelete(staleLocal.map((p) => p.id)).catch(() => {});
+          }
+          const remaining = await db.products.toArray().catch(() => []);
+          set({ products: remaining, isLoading: false });
           return;
         }
       }

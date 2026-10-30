@@ -2,11 +2,25 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let supabaseClient: SupabaseClient | null = null;
 let currentClientKey = '';
+let isCloudSyncDisabledForTest = false;
+
+export function disableCloudSyncForTests() {
+  isCloudSyncDisabledForTest = true;
+  supabaseClient = null;
+}
+
+export function enableCloudSync() {
+  isCloudSyncDisabledForTest = false;
+  supabaseClient = null;
+}
 
 export const DEFAULT_SUPABASE_URL = 'https://wmuhfxzkvpcdjnlztmlw.supabase.co';
 export const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_gvx-t7faifYXF1Qbqok9Lw_w_R-NGo3';
 
 export function getSupabaseClient(url?: string, anonKey?: string): SupabaseClient | null {
+  if (isCloudSyncDisabledForTest || (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test')) {
+    return null;
+  }
   // 1. Direct argument parameters
   let targetUrl = url?.trim();
   let targetKey = anonKey?.trim();

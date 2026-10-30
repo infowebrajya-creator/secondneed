@@ -131,6 +131,7 @@ export interface Customer {
   creditLimit?: number;
   notes?: string;
   isActive?: boolean;
+  synced?: boolean;
   createdAt: string;
   updatedAt?: string;
 }

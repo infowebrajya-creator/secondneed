@@ -119,33 +119,29 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         } else if (data) {
           const remoteList: Customer[] = data
             .filter((row: any) => (row.name || '').toLowerCase() !== 'cash customer')
-            .map(mapRemoteCustomerToLocal);
+            .map((row: any) => ({ ...mapRemoteCustomerToLocal(row), synced: true }));
 
           const remoteMap = new Map(remoteList.map((r) => [r.id, r]));
 
-          // SELF-HEALING AUTO-SYNC:
-          // Detect any local customer that is not yet in Supabase cloud, and push them to Supabase!
-          const missingInCloud = localCustomers.filter((c) => !remoteMap.has(c.id));
-          if (missingInCloud.length > 0) {
-            const payloads = missingInCloud.map((c) => toSupabaseCustomerPayload({
-              ...c,
-              createdAt: c.createdAt || new Date().toISOString()
-            }));
+          // Purge stale local test artifacts and any customer deleted from Supabase
+          const isTestCust = (c: Customer) =>
+            c.name === 'Buyer 1' ||
+            c.name === 'Buyer 2' ||
+            c.name === 'Double Clicker' ||
+            c.name === 'Return Customer' ||
+            c.name === 'Ramesh Kumar' ||
+            c.name === 'Priya Sharma';
 
-            const { error: upsertErr } = await client
-              .from('customers')
-              .upsert(payloads, { onConflict: 'id' });
-
-            if (!upsertErr) {
-              for (const c of missingInCloud) {
-                remoteList.push(c);
-              }
-            }
+          const staleCustomers = localCustomers.filter((c) => isTestCust(c) || !remoteMap.has(c.id));
+          if (staleCustomers.length > 0) {
+            await db.customers.bulkDelete(staleCustomers.map((s) => s.id)).catch(() => {});
           }
 
-          // Bulk save verified cloud records to local Dexie
+          // Overwrite local Dexie with verified remote list
           if (remoteList.length > 0) {
             await db.customers.bulkPut(remoteList);
+          } else {
+            await db.customers.clear().catch(() => {});
           }
 
           remoteList.sort((a, b) => {
@@ -154,7 +150,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             return a.name.localeCompare(b.name);
           });
 
-          // Only trigger state update if customer list actually changed to prevent any screen flickering
+          // Only trigger state update if customer list actually changed to prevent screen flickering
           const currentList = get().customers;
           const hasChanged = currentList.length !== remoteList.length || 
             remoteList.some((c, i) => {
@@ -163,7 +159,9 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
             });
 
           if (hasChanged) {
-            set({ customers: remoteList });
+            set({ customers: remoteList, isLoading: false });
+          } else {
+            set({ isLoading: false });
           }
         }
       }
