@@ -39,6 +39,6 @@ export const ShopProfileSchema = z.object({
   accountNo: z.string().optional().default(''),
   ifscCode: z.string().optional().default(''),
   upiId: z.string().optional().default(''),
-  invoicePrefix: z.string().trim().min(1, 'Invoice Prefix is compulsory (e.g. INV- or CTC-)'),
+  invoicePrefix: z.string().trim().min(1, 'Invoice Prefix is compulsory (e.g. SNS- or INV-)'),
   termsAndConditions: z.string().optional().default(''),
 });

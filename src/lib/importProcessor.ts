@@ -273,11 +273,11 @@ export function validateImportBatch(
 export function generateSampleTemplateCSV(): string {
   const headers = ['SKU', 'Barcode', 'ProductName', 'Category', 'PackInfo', 'Unit', 'MRP', 'PurchaseRate', 'SellingRate', 'HSNCode', 'GSTRate', 'TaxType', 'StockQuantity', 'LowStockThreshold', 'IsActive'];
   const sampleRows = [
-    ['CLM-NB-001', '8901030678901', 'Classmate Long Book Unruled 172 Pgs', 'Notebooks & Registers', '1 Pcs', 'Pcs', '75', '50', '70', '4820', '12', 'inclusive', '120', '20', 'true'],
-    ['REY-TRM-BLU', '8901234000012', 'Reynolds Trimax Gel Pen Blue', 'Pens & Writing', '1 Pcs', 'Pcs', '60', '42', '55', '9608', '18', 'inclusive', '200', '30', 'true'],
-    ['JK-A4-75GSM', '8902345000011', 'JK Copier A4 Paper 75 GSM (500 Sheets)', 'Paper & Pads', '1 Ream', 'Ream', '340', '255', '310', '4802', '12', 'inclusive', '45', '10', 'true'],
-    ['FEV-MR-100G', '8901084001001', 'Fevicol MR Squeezy Bottle 100g', 'Adhesives & Tapes', '100g Bottle', 'Pcs', '50', '36', '45', '3506', '18', 'inclusive', '110', '15', 'true'],
-    ['CAS-MJ12D', '4971850123456', 'Casio MJ-12D Desktop Calculator 150 Steps', 'Calculators & Instruments', '1 Box', 'Pcs', '550', '410', '510', '8470', '18', 'inclusive', '25', '5', 'true']
+    ['SHIRT-COT-001', '8901234567890', 'Cotton Casual Shirt Slim Fit (Size 40)', 'Shirts & Casuals', 'Size 40', 'Pcs', '999', '450', '799', '6205', '12', 'inclusive', '30', '5', 'true'],
+    ['JEAN-DNM-002', '8901234567891', 'Men Slim Fit Denim Jeans (Size 32)', 'Jeans & Denims', 'Size 32', 'Pcs', '1499', '700', '1199', '6203', '12', 'inclusive', '25', '5', 'true'],
+    ['TSHIRT-POL-003', '8901234567892', 'Classic Polo Collar T-Shirt (Size L)', 'T-Shirts & Polos', 'Size L', 'Pcs', '699', '280', '499', '6109', '5', 'inclusive', '50', '10', 'true'],
+    ['TROUSER-CHN-004', '8901234567893', 'Cotton Chino Trousers Khaki (Size 34)', 'Trousers & Chinos', 'Size 34', 'Pcs', '1299', '550', '999', '6203', '12', 'inclusive', '20', '4', 'true'],
+    ['KURTA-ETH-005', '8901234567894', 'Pure Linen Men Kurta (Size 40)', 'Ethnic & Kurta', 'Size 40', 'Pcs', '1599', '650', '1299', '6205', '12', 'inclusive', '15', '3', 'true']
   ];
 
   return [headers.join(','), ...sampleRows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');

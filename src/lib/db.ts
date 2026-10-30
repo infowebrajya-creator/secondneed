@@ -54,7 +54,7 @@ export const DEFAULT_SHOP_PROFILE: ShopProfile = {
   accountNo: '34567890123',
   ifscCode: 'SBIN0001234',
   upiId: 'mjain21@sbi',
-  invoicePrefix: 'CTC-',
+  invoicePrefix: 'SNS-',
   termsAndConditions: '1. Goods once sold will not be taken back without bill.\n2. Warranty as per manufacturer guidelines.\n3. Subject to local jurisdiction.'
 };
 
