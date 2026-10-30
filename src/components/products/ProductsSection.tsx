@@ -843,9 +843,12 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">SKU / Item Code *</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                SKU / Item Code <span className="text-red-600 font-black">*</span>
+              </label>
               <input
                 type="text"
+                required
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs font-mono text-[#2563EB] font-bold focus:outline-none focus:border-[#2563EB]"
@@ -857,7 +860,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-bold text-[#172B4D]">
-                  Company / Item Barcode
+                  Company / Item Barcode <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
                 </label>
                 <span className="text-[10px] text-[#64748B] font-medium hidden sm:inline">
                   EAN / UPC / Box code
@@ -896,10 +899,13 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div className="col-span-1 sm:col-span-2">
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Product Name *</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Product Name <span className="text-red-600 font-black">*</span>
+              </label>
               <input
                 ref={nameInputRef}
                 type="text"
+                required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-bold"
@@ -909,8 +915,11 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Category *</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Category <span className="text-red-600 font-black">*</span>
+              </label>
               <select
+                required
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
@@ -922,7 +931,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Pack Info</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Pack Info <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+              </label>
               <input
                 type="text"
                 value={formData.packInfo}
@@ -933,8 +944,11 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Measurement Unit *</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Measurement Unit <span className="text-red-600 font-black">*</span>
+              </label>
               <select
+                required
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value as UnitType })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
@@ -946,7 +960,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">MRP (Maximum Retail Price) ₹</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                MRP (Maximum Retail Price) ₹ <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -957,7 +973,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Purchase Price ₹</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Purchase Price ₹ <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -968,10 +986,13 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Selling Rate ₹ *</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Selling Rate ₹ <span className="text-red-600 font-black">*</span>
+              </label>
               <input
                 type="number"
                 step="0.01"
+                required
                 value={formData.saleRate}
                 onChange={(e) => setFormData({ ...formData, saleRate: parseFloat(e.target.value) || 0 })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs font-mono text-[#15803D] font-bold focus:outline-none focus:border-[#2563EB]"
@@ -979,7 +1000,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">HSN Code</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                HSN Code <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+              </label>
               <input
                 type="text"
                 value={formData.hsnCode}
@@ -990,8 +1013,11 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">GST Tax Slab *</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                GST Tax Slab <span className="text-red-600 font-black">*</span>
+              </label>
               <select
+                required
                 value={formData.gstRate}
                 onChange={(e) => setFormData({ ...formData, gstRate: parseInt(e.target.value) as GstRate })}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-xs font-mono text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
@@ -1003,7 +1029,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Initial Stock Qty</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Initial Stock Qty <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+              </label>
               <input
                 type="number"
                 value={formData.stockQty}
@@ -1013,7 +1041,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#172B4D] mb-1">Low Stock Threshold</label>
+              <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                Low Stock Threshold <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+              </label>
               <input
                 type="number"
                 value={formData.minStockLevel}

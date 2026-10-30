@@ -94,7 +94,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         {/* Customer Name */}
         <div>
           <label className="block text-[#172B4D] font-bold mb-1 uppercase tracking-wider text-[11px]">
-            Customer / Client Name *
+            Customer / Client Name <span className="text-red-600 font-black">*</span>
           </label>
           <div className="flex items-center gap-2 bg-[#F5F9FF] border border-[#D8E1EC] rounded-lg px-3 py-2 focus-within:border-[#2563EB] focus-within:ring-1 focus-within:ring-[#2563EB]">
             <User className="w-4 h-4 text-[#2563EB] shrink-0" />

@@ -27,10 +27,10 @@ export const CustomerSchema = z.object({
 });
 
 export const ShopProfileSchema = z.object({
-  shopName: z.string().min(2, 'Shop name is required'),
+  shopName: z.string().trim().min(1, 'Shop Name is compulsory'),
   tagline: z.string().optional().default(''),
-  address: z.string().min(2, 'Address is required'),
-  phone: z.string().min(5, 'Valid phone number is required'),
+  address: z.string().trim().min(1, 'Shop Address is compulsory'),
+  phone: z.string().trim().min(5, 'Phone Number is compulsory (min 5 digits)'),
   email: z.string().email('Invalid email address').or(z.literal('')).optional().default(''),
   gstin: z.string().trim().refine(val => val === '' || val.length === 15, 'GSTIN must be 15 characters if provided').optional().default(''),
   state: z.string().optional().default(''),
@@ -39,6 +39,6 @@ export const ShopProfileSchema = z.object({
   accountNo: z.string().optional().default(''),
   ifscCode: z.string().optional().default(''),
   upiId: z.string().optional().default(''),
-  invoicePrefix: z.string().min(1, 'Invoice prefix is required'),
+  invoicePrefix: z.string().trim().min(1, 'Invoice Prefix is compulsory (e.g. INV- or CTC-)'),
   termsAndConditions: z.string().optional().default(''),
 });

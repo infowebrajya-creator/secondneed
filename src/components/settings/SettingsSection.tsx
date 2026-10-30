@@ -635,10 +635,15 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
         {activeTab === 'shop' && (
           <form onSubmit={handleSaveShopProfile} className="max-w-3xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#D8E1EC] pb-2">
-              <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider">
-                Retail Shop Details & Invoice Header
-              </h3>
-              <div className="flex items-center gap-1.5">
+              <div>
+                <h3 className="text-sm font-extrabold text-[#172B4D] uppercase tracking-wider">
+                  Retail Shop Details & Invoice Header
+                </h3>
+                <p className="text-[11px] text-[#64748B] mt-0.5">
+                  Fields marked with <strong className="text-red-600 font-extrabold">* (Compulsory)</strong> in red must be filled. All others are optional.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
                 {saveStatus === 'saving' && (
                   <span className="flex items-center gap-1 text-[11px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] px-2.5 py-0.5 rounded-full animate-pulse">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
@@ -656,55 +661,82 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Shop Name *</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Shop Name <span className="text-red-600 font-black text-sm">*</span> <span className="text-red-600 text-[10px] font-extrabold uppercase tracking-wider">(Compulsory)</span>
+                </label>
                 <input
                   type="text"
+                  required
                   value={profileForm.shopName}
                   onChange={(e) => handleProfileChange('shopName', e.target.value)}
                   onBlur={handleProfileBlur}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-bold text-sm"
+                  placeholder="e.g. The secondneedstore"
+                  className={`w-full px-3 py-2 bg-white rounded-lg text-[#172B4D] focus:outline-none font-bold text-sm border transition-colors ${
+                    !profileForm.shopName.trim()
+                      ? 'border-red-400 focus:border-red-600 focus:ring-1 focus:ring-red-400 bg-red-50/15'
+                      : 'border-[#D8E1EC] focus:border-[#2563EB]'
+                  }`}
                 />
-                {profileErrors.shopName && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.shopName}</p>}
+                {profileErrors.shopName && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.shopName}</p>}
               </div>
 
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Tagline / Subheading</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Tagline / Subheading <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.tagline}
                   onChange={(e) => handleProfileChange('tagline', e.target.value)}
                   onBlur={handleProfileBlur}
+                  placeholder="e.g. Mens Clothing & Retail Store"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
               <div className="col-span-1 sm:col-span-2">
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Address *</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Address <span className="text-red-600 font-black text-sm">*</span> <span className="text-red-600 text-[10px] font-extrabold uppercase tracking-wider">(Compulsory)</span>
+                </label>
                 <textarea
                   rows={2}
+                  required
                   value={profileForm.address}
                   onChange={(e) => handleProfileChange('address', e.target.value)}
                   onBlur={handleProfileBlur}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
+                  placeholder="Shop No., Market / Street, City, State - PIN"
+                  className={`w-full px-3 py-2 bg-white rounded-lg text-[#172B4D] focus:outline-none border transition-colors ${
+                    !profileForm.address.trim()
+                      ? 'border-red-400 focus:border-red-600 focus:ring-1 focus:ring-red-400 bg-red-50/15'
+                      : 'border-[#D8E1EC] focus:border-[#2563EB]'
+                  }`}
                 />
-                {profileErrors.address && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.address}</p>}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Phone Number *</label>
-                <input
-                  type="text"
-                  value={profileForm.phone}
-                  onChange={(e) => handleProfileChange('phone', e.target.value)}
-                  onBlur={handleProfileBlur}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
-                />
-                {profileErrors.phone && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.phone}</p>}
+                {profileErrors.address && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.address}</p>}
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[#172B4D] mb-1">
-                  GSTIN (15 Digits) <span className="text-[11px] font-normal text-[#64748B]">(Optional for Non-GST)</span>
+                  Phone Number <span className="text-red-600 font-black text-sm">*</span> <span className="text-red-600 text-[10px] font-extrabold uppercase tracking-wider">(Compulsory)</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profileForm.phone}
+                  onChange={(e) => handleProfileChange('phone', e.target.value)}
+                  onBlur={handleProfileBlur}
+                  placeholder="e.g. 9425174721 or +91 94251 74721"
+                  className={`w-full px-3 py-2 bg-white rounded-lg text-[#172B4D] focus:outline-none font-mono border transition-colors ${
+                    !profileForm.phone.trim()
+                      ? 'border-red-400 focus:border-red-600 focus:ring-1 focus:ring-red-400 bg-red-50/15'
+                      : 'border-[#D8E1EC] focus:border-[#2563EB]'
+                  }`}
+                />
+                {profileErrors.phone && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.phone}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  GSTIN (15 Digits) <span className="text-[#64748B] text-[11px] font-normal">(Optional for Non-GST)</span>
                 </label>
                 <input
                   type="text"
@@ -714,11 +746,13 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   placeholder="e.g. 23AAAAA0000A1Z5 (Leave blank if non-GST)"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] uppercase font-bold text-[#B45309] font-mono"
                 />
-                {profileErrors.gstin && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.gstin}</p>}
+                {profileErrors.gstin && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.gstin}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">State / Union Territory</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  State / Union Territory <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.state || ''}
@@ -727,11 +761,13 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   placeholder="e.g. Madhya Pradesh (23)"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
-                {profileErrors.state && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.state}</p>}
+                {profileErrors.state && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.state}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Pincode</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Pincode <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.pincode || ''}
@@ -740,23 +776,33 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
                   placeholder="e.g. 480661"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                 />
-                {profileErrors.pincode && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.pincode}</p>}
+                {profileErrors.pincode && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.pincode}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Invoice Number Prefix *</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Invoice Number Prefix <span className="text-red-600 font-black text-sm">*</span> <span className="text-red-600 text-[10px] font-extrabold uppercase tracking-wider">(Compulsory)</span>
+                </label>
                 <input
                   type="text"
+                  required
                   value={profileForm.invoicePrefix}
                   onChange={(e) => handleProfileChange('invoicePrefix', e.target.value)}
                   onBlur={handleProfileBlur}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
+                  placeholder="e.g. CTC- or INV-"
+                  className={`w-full px-3 py-2 bg-white rounded-lg text-[#172B4D] focus:outline-none font-mono border transition-colors ${
+                    !profileForm.invoicePrefix.trim()
+                      ? 'border-red-400 focus:border-red-600 focus:ring-1 focus:ring-red-400 bg-red-50/15'
+                      : 'border-[#D8E1EC] focus:border-[#2563EB]'
+                  }`}
                 />
-                {profileErrors.invoicePrefix && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5">{profileErrors.invoicePrefix}</p>}
+                {profileErrors.invoicePrefix && <p className="text-[#B91C1C] text-[11px] font-mono mt-0.5 font-bold">{profileErrors.invoicePrefix}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">UPI Payment ID (for Invoice QR)</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  UPI Payment ID (for Invoice QR) <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.upiId}
@@ -768,29 +814,37 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ onToast }) => 
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Bank Name</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Bank Name <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.bankName}
                   onChange={(e) => handleProfileChange('bankName', e.target.value)}
                   onBlur={handleProfileBlur}
+                  placeholder="e.g. State Bank of India"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">Bank Account Number</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  Bank Account Number <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.accountNo}
                   onChange={(e) => handleProfileChange('accountNo', e.target.value)}
                   onBlur={handleProfileBlur}
+                  placeholder="e.g. 34567890123"
                   className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-lg text-[#172B4D] focus:outline-none focus:border-[#2563EB] font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#172B4D] mb-1">IFSC Code</label>
+                <label className="block text-xs font-bold text-[#172B4D] mb-1">
+                  IFSC Code <span className="text-[#64748B] text-[11px] font-normal">(Optional)</span>
+                </label>
                 <input
                   type="text"
                   value={profileForm.ifscCode || ''}
