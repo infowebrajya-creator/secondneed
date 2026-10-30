@@ -27,7 +27,7 @@ export const ReorderAssistantModal: React.FC<ReorderAssistantModalProps> = ({
   shopProfile,
   onToast
 }) => {
-  const [vendorName, setVendorName] = useState('Stationery Distributor');
+  const [vendorName, setVendorName] = useState('Clothing Wholesaler / Distributor');
   const [vendorMobile, setVendorMobile] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -246,7 +246,7 @@ export const ReorderAssistantModal: React.FC<ReorderAssistantModalProps> = ({
               type="text"
               value={vendorName}
               onChange={e => setVendorName(e.target.value)}
-              placeholder="e.g. Navneet Stationery Depot"
+              placeholder="e.g. Surat Garments Wholesaler / Fabric Mills"
               className="w-full px-2.5 py-1.5 bg-white border border-[#D8E1EC] rounded-lg text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
             />
           </div>

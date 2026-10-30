@@ -11,12 +11,12 @@ interface NewBillRemarkModalProps {
 
 const COMMON_REMARKS = [
   'Counter Sale',
-  'School Order',
-  'Class 10th Books',
-  'Class 9th Books',
-  'Class 8th Books',
-  'Office Stationery',
-  'Coaching Set',
+  'Casual Wear',
+  'Formal Wear',
+  'Festive Offer',
+  'Wedding Purchase',
+  'Customer Exchange',
+  'Trial & Fit',
   'Bulk Order'
 ];
 

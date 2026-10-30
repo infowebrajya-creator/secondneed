@@ -10,7 +10,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 700,
-    title: 'WebRajya Invoice - Stationery Billing POS & Inventory',
+    title: 'WebRajya Invoice - Retail POS & Inventory',
     icon: path.join(__dirname, '../public/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

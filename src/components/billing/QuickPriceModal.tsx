@@ -9,17 +9,17 @@ interface QuickPriceModalProps {
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
 }
 
-const COMMON_PRESETS = [5, 10, 20, 25, 30, 50, 100, 200];
+const COMMON_PRESETS = [199, 299, 399, 499, 699, 999, 1499, 1999];
 
 const ITEM_NAME_TAGS = [
-  'General Stationery',
-  'Photocopy / Xerox',
-  'Spiral Binding',
-  'Lamination',
-  'Chart & Project Paper',
-  'Brown Cover / Roll',
-  'Office File & Folder',
-  'Pen & Refill'
+  'Casual Shirt',
+  'T-Shirt / Polo',
+  'Jeans / Denim',
+  'Cotton Trousers',
+  'Formal Shirt',
+  'Kurta / Ethnic',
+  'Innerwear',
+  'Accessories / Belt'
 ];
 
 export const QuickPriceModal: React.FC<QuickPriceModalProps> = ({
@@ -29,9 +29,9 @@ export const QuickPriceModal: React.FC<QuickPriceModalProps> = ({
 }) => {
   const { addCustomItem, invoiceType } = useBillingStore();
 
-  const [selectedTag, setSelectedTag] = useState('General Stationery');
+  const [selectedTag, setSelectedTag] = useState('Casual Shirt');
   const [customName, setCustomName] = useState('');
-  const [amountStr, setAmountStr] = useState('10');
+  const [amountStr, setAmountStr] = useState('499');
   const [qty, setQty] = useState(1);
   const [gstRate, setGstRate] = useState<number>(invoiceType === 'gst' ? 12 : 0);
 

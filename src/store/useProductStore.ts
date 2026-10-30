@@ -27,50 +27,54 @@ interface ProductState {
   syncWithSupabase: () => Promise<{ success: boolean; message: string }>;
 }
 
+const LEGACY_DEMO_SKUS = new Set([
+  'CLM-NB-172', 'CLM-NB-A4-200', 'REY-TRM-BLU', 'REY-TRM-BLK',
+  'HAU-XO-5PKT', 'PEN-ENG-07', 'JK-A4-75GSM', 'B2B-A4-80GSM',
+  'FEV-MR-100G', 'FEV-STK-15G', 'FBC-WCP-24', 'CAM-ACR-12',
+  'SOL-COB-A4', 'SOL-DSP-20', 'CAS-MJ12D', 'CAM-MDB-BOX',
+  'NAT-621-10PKT', 'APS-PLT-10PKT', 'PST-STK-3X3', 'KNG-STP-10D',
+  'KNG-PIN-10BOX', 'WND-CEL-1IN', 'FBC-HLT-4SET', 'LUX-MRK-BLK',
+  'CAM-WBM-BLU'
+]);
+
 export const isDemoStationeryProduct = (p: Partial<Product>) => {
-  const s = (p.sku || '').toUpperCase();
-  const c = (p.category || '').toLowerCase();
-  const n = (p.name || '').toLowerCase();
+  if (p.id && p.id.startsWith('prod_seed_')) return true;
+  const s = (p.sku || '').toUpperCase().trim();
+  if (LEGACY_DEMO_SKUS.has(s)) return true;
+  if (
+    s.startsWith('CLM-NB-') ||
+    s.startsWith('REY-TRM-') ||
+    s.startsWith('HAU-XO-') ||
+    s.startsWith('FEV-MR-') ||
+    s.startsWith('FEV-STK-')
+  ) {
+    return true;
+  }
+  const n = (p.name || '').toLowerCase().trim();
   return (
-    s.startsWith('CLM-') ||
-    s.startsWith('REY-') ||
-    s.startsWith('HAU-') ||
-    s.startsWith('PEN-') ||
-    s.startsWith('JK-') ||
-    s.startsWith('B2B-') ||
-    s.startsWith('FEV-') ||
-    s.startsWith('FBC-') ||
-    s.startsWith('CAM-') ||
-    s.startsWith('SOL-') ||
-    s.startsWith('CAS-') ||
-    s.startsWith('NAT-') ||
-    s.startsWith('APS-') ||
-    s.startsWith('PST-') ||
-    s.startsWith('KNG-') ||
-    s.startsWith('WND-') ||
-    s.startsWith('LUX-') ||
-    s.startsWith('SKU-P_') ||
-    s.startsWith('SKU-P-') ||
-    Boolean(p.id && p.id.startsWith('prod_seed_')) ||
-    c.includes('stationery') ||
-    c.includes('pens &') ||
-    c.includes('notebooks') ||
-    c.includes('paper &') ||
-    c.includes('adhesives') ||
-    c.includes('calculators') ||
-    c.includes('desk accessories') ||
-    n.includes('classmate') ||
-    n.includes('reynolds') ||
-    n.includes('hauser') ||
-    n.includes('fevicol') ||
-    n.includes('fevistick') ||
-    n.includes('trimax') ||
-    n.includes('camlin') ||
-    n.includes('casio') ||
-    n.includes('kangaro') ||
-    n.includes('apsara') ||
-    n.includes('nataraj') ||
-    n.includes('jk copier')
+    n.includes('classmate long book') ||
+    n.includes('classmate spiral') ||
+    n.includes('reynolds trimax') ||
+    n.includes('hauser xo ball pen') ||
+    n.includes('pentel energel') ||
+    n.includes('jk copier a4 paper') ||
+    n.includes('fevicol mr squeezy') ||
+    n.includes('fevistick glue stick') ||
+    n.includes('faber-castell 24 tri-grip') ||
+    n.includes('camlin kokuyo acrylic') ||
+    n.includes('solo cobra executive') ||
+    n.includes('solo display file') ||
+    n.includes('casio mj-12d desktop') ||
+    n.includes('camel mathematical drawing') ||
+    n.includes('nataraj 621 bold pencils') ||
+    n.includes('apsara platinum extra dark') ||
+    n.includes('post-it sticky notes') ||
+    n.includes('kangaro stapler hd-10d') ||
+    n.includes('kangaro staple pins no.10') ||
+    n.includes('wonder cello tape 1 inch') ||
+    n.includes('faber-castell textliner 38') ||
+    n.includes('luxor permanent marker') ||
+    n.includes('camlin whiteboard marker')
   );
 };
 

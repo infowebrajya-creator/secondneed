@@ -167,9 +167,15 @@ export async function runPurchaseBillScannerTestSuite(): Promise<TestResult[]> {
   });
 
   await runTest('7. Atomic Stock Inwarding Transaction & Movement Logging', async () => {
-    // Put sample product into Dexie DB
-    await db.products.put(sampleProducts[0]);
-    const prevStock = sampleProducts[0].stockQty; // 50
+    // Put sample product into Dexie DB with clean test identifier
+    const testInwardProd: Product = {
+      ...sampleProducts[0],
+      id: 'prod_test_inward_1',
+      sku: 'TEST-INWARD-001',
+      name: 'Test Inward Product 172 Pgs'
+    };
+    await db.products.put(testInwardProd);
+    const prevStock = testInwardProd.stockQty; // 50
 
     const purchaseStore = usePurchaseStore.getState();
 
@@ -183,9 +189,9 @@ export async function runPurchaseBillScannerTestSuite(): Promise<TestResult[]> {
       items: [
         {
           id: 'test_item_1',
-          productId: sampleProducts[0].id,
-          rawName: sampleProducts[0].name,
-          matchedProductName: sampleProducts[0].name,
+          productId: testInwardProd.id,
+          rawName: testInwardProd.name,
+          matchedProductName: testInwardProd.name,
           qty: 25,
           freeQty: 5,
           unit: 'Pcs',
@@ -215,7 +221,7 @@ export async function runPurchaseBillScannerTestSuite(): Promise<TestResult[]> {
     if (result.totalStockAdded !== 40) throw new Error(`Expected 40 total stock units (30 + 10), got ${result.totalStockAdded}`);
 
     // Verify product stock incremented in DB
-    const updatedProd = await db.products.get(sampleProducts[0].id);
+    const updatedProd = await db.products.get(testInwardProd.id);
     if (!updatedProd) throw new Error('Product not found in DB');
     // 50 + 25 + 5 = 80
     if (updatedProd.stockQty !== 80) {
@@ -227,7 +233,7 @@ export async function runPurchaseBillScannerTestSuite(): Promise<TestResult[]> {
     }
 
     // Verify stock movements were recorded
-    const movements = await db.stockMovements.where('productId').equals(sampleProducts[0].id).toArray();
+    const movements = await db.stockMovements.where('productId').equals(testInwardProd.id).toArray();
     const purchaseMovement = movements.find(m => m.type === 'purchase');
     if (!purchaseMovement) throw new Error('StockMovement of type "purchase" not created');
     if (purchaseMovement.quantityChange !== 30) {

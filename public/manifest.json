@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "WebRajya Invoice - Stationery Billing POS",
+  "name": "WebRajya Invoice - Retail POS",
   "short_name": "WebRajya POS",
-  "description": "High-speed offline-first Stationery Billing POS, Inventory, and GST Invoice Management System",
+  "description": "High-speed offline-first Retail Billing POS, Inventory, and GST Invoice Management System",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

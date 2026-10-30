@@ -64,17 +64,17 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
     sku: '',
     barcode: '',
     name: '',
-    category: 'Notebooks & Registers',
-    packInfo: '1 Pcs',
+    category: 'Shirts & Casuals',
+    packInfo: 'Size L',
     unit: 'Pcs' as UnitType,
-    mrp: 50,
-    purchaseRate: 35,
-    saleRate: 45,
-    hsnCode: '4820',
+    mrp: 699,
+    purchaseRate: 350,
+    saleRate: 599,
+    hsnCode: '6205',
     gstRate: 12 as GstRate,
     taxType: 'inclusive' as TaxType,
-    stockQty: 100,
-    minStockLevel: 15,
+    stockQty: 25,
+    minStockLevel: 5,
     isActive: true
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -97,17 +97,17 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       sku: generatedSku,
       barcode: '',
       name: '',
-      category: 'Notebooks & Registers',
-      packInfo: '1 Pcs',
+      category: 'Shirts & Casuals',
+      packInfo: 'Size L',
       unit: 'Pcs',
-      mrp: 50,
-      purchaseRate: 35,
-      saleRate: 45,
-      hsnCode: '4820',
+      mrp: 699,
+      purchaseRate: 350,
+      saleRate: 599,
+      hsnCode: '6205',
       gstRate: 12,
       taxType: 'inclusive',
-      stockQty: 100,
-      minStockLevel: 15,
+      stockQty: 25,
+      minStockLevel: 5,
       isActive: true
     });
     setFormErrors({});
@@ -196,17 +196,17 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           sku: generatedSku,
           barcode: code,
           name: '',
-          category: 'Notebooks & Registers',
-          packInfo: '1 Pcs',
+          category: 'Shirts & Casuals',
+          packInfo: 'Size L',
           unit: 'Pcs',
-          mrp: 50,
-          purchaseRate: 35,
-          saleRate: 45,
-          hsnCode: '4820',
+          mrp: 699,
+          purchaseRate: 350,
+          saleRate: 599,
+          hsnCode: '6205',
           gstRate: 12,
           taxType: 'inclusive',
-          stockQty: 100,
-          minStockLevel: 15,
+          stockQty: 25,
+          minStockLevel: 5,
           isActive: true
         });
         setFormErrors({});
@@ -514,7 +514,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
         {/* Mobile Horizontal Quick Category Touch Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto touch-scroll pb-0.5 no-scrollbar">
-          {STATIONERY_CATEGORIES.slice(0, 8).map((cat) => {
+          {STATIONERY_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat;
             return (
               <button
@@ -542,7 +542,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
             <div className="bg-white border border-[#D8E1EC] rounded-2xl p-8 text-center text-[#64748B] shadow-xs">
               <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
               <div className="font-bold text-[#172B4D]">No products found</div>
-              <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className="mt-2 text-xs text-[#2563EB] hover:underline font-bold cursor-pointer">
+              <button onClick={handleOpenAddModal} className="mt-2 text-xs text-[#2563EB] hover:underline font-bold cursor-pointer">
                 + Add New Product
               </button>
             </div>
@@ -686,7 +686,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                     <td colSpan={11} className="py-16 text-center text-[#64748B]">
                       <Package className="w-10 h-10 mx-auto mb-2 text-[#94A3B8]" />
                       <div className="font-bold text-[#172B4D]">No products found matching criteria</div>
-                      <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className="mt-2 text-xs text-[#2563EB] hover:underline font-bold cursor-pointer">+ Add New Product</button>
+                      <button onClick={handleOpenAddModal} className="mt-2 text-xs text-[#2563EB] hover:underline font-bold cursor-pointer">+ Add New Product</button>
                     </td>
                   </tr>
                 ) : (
