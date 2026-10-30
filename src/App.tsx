@@ -286,11 +286,11 @@ export function App() {
               GST & Retail Invoicing
             </span>
             <span 
-              className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0"
-              title="Continuous Live Synchronization Heartbeat (Refreshes automatically every 2 seconds)"
+              className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0"
+              title="Continuous 100% Live Cloud Synchronization"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Live Sync 2s</span>
+              <span><span className="hidden xs:inline">Live </span>Online</span>
             </span>
           </div>
         </div>

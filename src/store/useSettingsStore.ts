@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ShopProfile, PrintSettings, BillingSettings, SupabaseConfig } from '../types';
 import { db, DEFAULT_SHOP_PROFILE, DEFAULT_PRINT_SETTINGS, DEFAULT_BILLING_SETTINGS, DEFAULT_SUPABASE_CONFIG } from '../lib/db';
-import { resetSupabaseClient, testSupabaseConnection } from '../lib/supabase';
+import { resetSupabaseClient, testSupabaseConnection, getSupabaseClient } from '../lib/supabase';
 
 interface SettingsState {
   shopProfile: ShopProfile;
@@ -130,6 +130,42 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         supabaseConfig: localSupa || (supaRec ? supaRec.value : DEFAULT_SUPABASE_CONFIG),
         isLoading: false
       });
+
+      // 3. Non-blocking Cloud Sync: Fetch Shop Profile from Supabase
+      const client = getSupabaseClient();
+      if (client) {
+        try {
+          const { data: remoteData } = await client
+            .from('store_settings')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+
+          if (remoteData && remoteData.store_name) {
+            const remoteShop: ShopProfile = {
+              shopName: remoteData.store_name,
+              tagline: remoteData.tagline || '',
+              address: remoteData.address || '',
+              phone: remoteData.phone || '',
+              email: remoteData.email || '',
+              gstin: remoteData.gstin || '',
+              state: remoteData.state_name || currentShop.state || 'Madhya Pradesh (23)',
+              pincode: remoteData.pincode || '',
+              bankName: remoteData.bank_name || '',
+              accountNo: remoteData.account_no || '',
+              ifscCode: remoteData.ifsc_code || '',
+              upiId: remoteData.upi_id || '',
+              invoicePrefix: remoteData.invoice_prefix || 'INV-',
+              termsAndConditions: remoteData.terms_and_conditions || currentShop.termsAndConditions
+            };
+            await db.keyValueSettings.put({ key: 'shopProfile', value: remoteShop });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(LS_SHOP_KEY, JSON.stringify(remoteShop));
+            }
+            set({ shopProfile: remoteShop });
+          }
+        } catch (_) {}
+      }
     } catch (err) {
       set({ isLoading: false });
     }
@@ -145,6 +181,39 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
     await db.keyValueSettings.put({ key: 'shopProfile', value: shopProfile });
     set({ shopProfile });
+
+    // Cloud sync to Supabase store_settings table
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const payload = {
+          store_name: shopProfile.shopName,
+          tagline: shopProfile.tagline || '',
+          address: shopProfile.address || '',
+          phone: shopProfile.phone || '',
+          email: shopProfile.email || '',
+          gstin: shopProfile.gstin || '',
+          state_name: shopProfile.state || '',
+          state_code: shopProfile.state ? (shopProfile.state.match(/\((\d+)\)/)?.[1] || '23') : '23',
+          pincode: shopProfile.pincode || '',
+          bank_name: shopProfile.bankName || '',
+          account_no: shopProfile.accountNo || '',
+          ifsc_code: shopProfile.ifscCode || '',
+          upi_id: shopProfile.upiId || '',
+          invoice_prefix: shopProfile.invoicePrefix || 'INV-',
+          terms_and_conditions: shopProfile.termsAndConditions || '',
+          updated_at: new Date().toISOString()
+        };
+        const { data: existing } = await client.from('store_settings').select('id').limit(1).maybeSingle();
+        if (existing?.id) {
+          await client.from('store_settings').update(payload).eq('id', existing.id);
+        } else {
+          await client.from('store_settings').insert(payload);
+        }
+      } catch (e) {
+        console.warn('[useSettingsStore] Cloud store_settings sync note:', e);
+      }
+    }
   },
 
   savePrintSettings: async (printSettings) => {

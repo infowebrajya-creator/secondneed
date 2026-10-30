@@ -3,7 +3,7 @@ import type { Invoice, PaymentMode, StockMovement, AuditLog } from '../types';
 import { db } from '../lib/db';
 import { getSupabaseClient } from '../lib/supabase';
 import { generateInvoiceNumber, calculateNextInvoiceNumber } from '../utils/formatters';
-import { useCustomerStore } from './useCustomerStore';
+import { useCustomerStore, toSupabaseCustomerPayload } from './useCustomerStore';
 
 
 interface SalesState {
@@ -422,6 +422,10 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     };
 
     let resultInvoice: Invoice = newInvoice;
+    let touchedCustomerId: string | null = null;
+    const custName = (invoiceData.customerName || '').trim();
+    const cleanMobile = (invoiceData.customerMobile || '').trim();
+    const isNamedCustomer = custName && custName.toLowerCase() !== 'cash customer';
 
     // 5. LOCAL ATOMIC DEXIE TRANSACTION FIRST (Toyota Instant Counter Guarantee: < 30ms)
     await db.transaction('rw', db.invoices, db.products, db.stockMovements, db.customers, async () => {
@@ -447,21 +451,37 @@ export const useSalesStore = create<SalesState>((set, get) => ({
 
       await db.invoices.put(newInvoice);
 
-      // Update Khata customer ledger only for real named parties or mobile numbers
-      const custName = (invoiceData.customerName || '').trim();
-      const isNamedCustomer = custName && custName.toLowerCase() !== 'cash customer';
-      if (invoiceData.customerMobile || isNamedCustomer) {
-        const customerStore = useCustomerStore.getState();
-        const existingCust = await customerStore.findOrCreateCustomer(
-          custName || (invoiceData.customerMobile ? `Client (${invoiceData.customerMobile})` : 'Counter Client'),
-          invoiceData.customerMobile || '',
-          invoiceData.customerGstin || '',
-          invoiceData.customerAddress || ''
-        );
+      // Update Khata customer ledger strictly in pure Dexie (no network calls inside IDB transaction)
+      if (cleanMobile || isNamedCustomer) {
+        let existingCust = cleanMobile
+          ? await db.customers.where('mobile').equals(cleanMobile).first()
+          : null;
+        if (!existingCust && custName) {
+          existingCust = await db.customers.where('name').equalsIgnoreCase(custName).first();
+        }
 
-        if (existingCust && invoiceData.paymentMode === 'credit') {
-          await customerStore.updateCustomer(existingCust.id, {
-            creditBalance: (existingCust.creditBalance || 0) + invoiceData.netPayable
+        if (existingCust) {
+          touchedCustomerId = existingCust.id;
+          let newCreditBalance = existingCust.creditBalance || 0;
+          if (invoiceData.paymentMode === 'credit') {
+            newCreditBalance += invoiceData.netPayable;
+          }
+          await db.customers.update(existingCust.id, {
+            creditBalance: newCreditBalance,
+            updatedAt: now.toISOString(),
+          });
+        } else {
+          touchedCustomerId = 'cust_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+          await db.customers.put({
+            id: touchedCustomerId,
+            name: custName || `Client (${cleanMobile})`,
+            mobile: cleanMobile,
+            gstin: invoiceData.customerGstin?.trim() || undefined,
+            address: invoiceData.customerAddress?.trim() || undefined,
+            creditBalance: invoiceData.paymentMode === 'credit' ? invoiceData.netPayable : 0,
+            isActive: true,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString()
           });
         }
       }
@@ -501,11 +521,27 @@ export const useSalesStore = create<SalesState>((set, get) => ({
       invoices: [resultInvoice, ...state.invoices.filter((i) => i.id !== resultInvoice.id)]
     }));
 
+    // Refresh customer store in-memory state without blocking
+    if (cleanMobile || isNamedCustomer) {
+      useCustomerStore.getState().loadCustomers().catch(() => {});
+    }
+
     // 7. Non-blocking asynchronous cloud sync to Supabase
     const client = getSupabaseClient();
     if (client) {
       (async () => {
         try {
+          if (touchedCustomerId) {
+            try {
+              const custToSync = await db.customers.get(touchedCustomerId);
+              if (custToSync) {
+                await client.from('customers').upsert([toSupabaseCustomerPayload(custToSync)], { onConflict: 'id' });
+              }
+            } catch (custErr) {
+              console.warn('[useSalesStore] Background customer sync warning:', custErr);
+            }
+          }
+
           await ensureProductsExistInSupabase(client, resultInvoice.items);
           const { invoiceRow, itemRows } = mapLocalInvoiceToRemote(resultInvoice);
           const res = await client.from('invoices').upsert(invoiceRow, { onConflict: 'id' });

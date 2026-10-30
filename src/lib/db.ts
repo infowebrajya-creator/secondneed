@@ -42,19 +42,19 @@ export const db = new WebRajyaDatabase();
 
 // Default Shop Profile Settings
 export const DEFAULT_SHOP_PROFILE: ShopProfile = {
-  shopName: (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SHOP_NAME && import.meta.env.VITE_SHOP_NAME !== 'CHANDRA TRADING COMPANY') ? import.meta.env.VITE_SHOP_NAME : 'WebRajya Retail POS',
-  tagline: 'Retail POS & Billing',
-  address: 'Main Market Road',
-  phone: '',
+  shopName: 'The secondneedstore',
+  tagline: 'mens clothing',
+  address: 'New Shukrawari Market, Seoni, Madhya Pradesh - 480661',
+  phone: '+91 94251 74721',
   email: '',
   gstin: '',
   state: 'Madhya Pradesh (23)',
-  pincode: '',
-  bankName: '',
-  accountNo: '',
-  ifscCode: '',
-  upiId: '',
-  invoicePrefix: 'INV-',
+  pincode: '480661',
+  bankName: 'State Bank of India',
+  accountNo: '34567890123',
+  ifscCode: 'SBIN0001234',
+  upiId: 'mjain21@sbi',
+  invoicePrefix: 'CTC-',
   termsAndConditions: '1. Goods once sold will not be taken back without bill.\n2. Warranty as per manufacturer guidelines.\n3. Subject to local jurisdiction.'
 };
 
@@ -81,8 +81,8 @@ export const DEFAULT_BILLING_SETTINGS: BillingSettings = {
 };
 
 export const DEFAULT_SUPABASE_CONFIG: SupabaseConfig = {
-  url: (typeof import.meta !== 'undefined' && import.meta && import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '',
-  anonKey: (typeof import.meta !== 'undefined' && import.meta && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || '',
-  autoSync: false,
+  url: 'https://wmuhfxzkvpcdjnlztmlw.supabase.co',
+  anonKey: 'sb_publishable_gvx-t7faifYXF1Qbqok9Lw_w_R-NGo3',
+  autoSync: true,
   lastSyncAt: null
 };

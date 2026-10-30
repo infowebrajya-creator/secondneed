@@ -3,6 +3,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let supabaseClient: SupabaseClient | null = null;
 let currentClientKey = '';
 
+export const DEFAULT_SUPABASE_URL = 'https://wmuhfxzkvpcdjnlztmlw.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_gvx-t7faifYXF1Qbqok9Lw_w_R-NGo3';
+
 export function getSupabaseClient(url?: string, anonKey?: string): SupabaseClient | null {
   // 1. Direct argument parameters
   let targetUrl = url?.trim();
@@ -43,6 +46,10 @@ export function getSupabaseClient(url?: string, anonKey?: string): SupabaseClien
     targetUrl = targetUrl || envUrl;
     targetKey = targetKey || envKey;
   }
+
+  // 4. Default Project Fallback (ensures 100% online cloud sync on mobile phones & Vercel)
+  targetUrl = targetUrl || DEFAULT_SUPABASE_URL;
+  targetKey = targetKey || DEFAULT_SUPABASE_ANON_KEY;
 
   if (!targetUrl || !targetKey || targetUrl.trim() === '' || targetKey.trim() === '' || targetUrl.includes('your-supabase-url')) {
     return null;

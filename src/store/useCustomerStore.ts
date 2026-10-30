@@ -18,7 +18,7 @@ interface CustomerState {
 
 let customerRealtimeSubscribed = false;
 
-function toSupabaseCustomerPayload(cust: Partial<Customer>) {
+export function toSupabaseCustomerPayload(cust: Partial<Customer>) {
   const payload: Record<string, any> = {
     updated_at: cust.updatedAt || new Date().toISOString()
   };
@@ -87,6 +87,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       const client = getSupabaseClient();
       if (client) {
         if (!customerRealtimeSubscribed) {
+          customerRealtimeSubscribed = true;
           try {
             client
               .channel('public:customers_sync')
@@ -98,11 +99,12 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
                 }
               )
               .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                  customerRealtimeSubscribed = true;
+                if (status !== 'SUBSCRIBED') {
+                  customerRealtimeSubscribed = false;
                 }
               });
           } catch (e) {
+            customerRealtimeSubscribed = false;
             console.warn('[useCustomerStore] Realtime channel warning:', e);
           }
         }
