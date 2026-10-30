@@ -27,6 +27,53 @@ interface ProductState {
   syncWithSupabase: () => Promise<{ success: boolean; message: string }>;
 }
 
+export const isDemoStationeryProduct = (p: Partial<Product>) => {
+  const s = (p.sku || '').toUpperCase();
+  const c = (p.category || '').toLowerCase();
+  const n = (p.name || '').toLowerCase();
+  return (
+    s.startsWith('CLM-') ||
+    s.startsWith('REY-') ||
+    s.startsWith('HAU-') ||
+    s.startsWith('PEN-') ||
+    s.startsWith('JK-') ||
+    s.startsWith('B2B-') ||
+    s.startsWith('FEV-') ||
+    s.startsWith('FBC-') ||
+    s.startsWith('CAM-') ||
+    s.startsWith('SOL-') ||
+    s.startsWith('CAS-') ||
+    s.startsWith('NAT-') ||
+    s.startsWith('APS-') ||
+    s.startsWith('PST-') ||
+    s.startsWith('KNG-') ||
+    s.startsWith('WND-') ||
+    s.startsWith('LUX-') ||
+    s.startsWith('SKU-P_') ||
+    s.startsWith('SKU-P-') ||
+    Boolean(p.id && p.id.startsWith('prod_seed_')) ||
+    c.includes('stationery') ||
+    c.includes('pens &') ||
+    c.includes('notebooks') ||
+    c.includes('paper &') ||
+    c.includes('adhesives') ||
+    c.includes('calculators') ||
+    c.includes('desk accessories') ||
+    n.includes('classmate') ||
+    n.includes('reynolds') ||
+    n.includes('hauser') ||
+    n.includes('fevicol') ||
+    n.includes('fevistick') ||
+    n.includes('trimax') ||
+    n.includes('camlin') ||
+    n.includes('casio') ||
+    n.includes('kangaro') ||
+    n.includes('apsara') ||
+    n.includes('nataraj') ||
+    n.includes('jk copier')
+  );
+};
+
 export const CLOTHING_CATEGORIES = [
   'All Categories',
   'Shirts & Casuals',
@@ -67,12 +114,17 @@ export const useProductStore = create<ProductState>((set, get) => ({
       return;
     }
 
-    // 1. Instant 0ms Load from Local Dexie Cache First
-    const localProducts = await db.products.toArray().catch(() => []);
+    // 1. Instant 0ms Load from Local Dexie Cache (filter out any legacy demo stationery items)
+    let localProducts = await db.products.toArray().catch(() => []);
+    const demoItems = localProducts.filter(isDemoStationeryProduct);
+    if (demoItems.length > 0) {
+      await db.products.bulkDelete(demoItems.map(d => d.id)).catch(() => {});
+      localProducts = localProducts.filter(p => !isDemoStationeryProduct(p));
+    }
     if (localProducts.length > 0) {
       set({ products: localProducts, isLoading: false, error: null });
     } else {
-      set({ isLoading: true, error: null });
+      set({ products: [], isLoading: true, error: null });
     }
 
     // 2. Non-blocking Background Cloud Refresh
@@ -190,30 +242,34 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
           const remoteIdSet = new Set(mappedProducts.map((p) => p.id));
           
-          // Purge stale local products that were synced previously but are now deleted from Supabase
-          const staleLocal = currentLocal.filter((p) => p.synced && !remoteIdSet.has(p.id));
+          // Purge stale local products and any legacy demo stationery products
+          const staleLocal = currentLocal.filter((p) => isDemoStationeryProduct(p) || (p.synced && !remoteIdSet.has(p.id)));
           if (staleLocal.length > 0) {
             await db.products.bulkDelete(staleLocal.map((p) => p.id)).catch(() => {});
           }
 
-          // Preserve only truly unsynced offline products
-          const unsyncedLocal = currentLocal.filter((p) => !p.synced && !remoteIdSet.has(p.id));
+          // Preserve only truly unsynced real non-demo products
+          const unsyncedLocal = currentLocal.filter((p) => !isDemoStationeryProduct(p) && !p.synced && !remoteIdSet.has(p.id));
 
           await db.products.bulkPut(mappedProducts);
           if (unsyncedLocal.length > 0) {
             await db.products.bulkPut(unsyncedLocal);
           }
           const allMerged = await db.products.toArray();
-          set({ products: allMerged, isLoading: false });
+          set({ products: allMerged.filter((p) => !isDemoStationeryProduct(p)), isLoading: false });
           return;
         } else {
-          // Cloud catalog is empty (clean slate) - Purge local synced/demo products
-          const staleLocal = currentLocal.filter((p) => p.synced);
+          // Cloud catalog is empty (clean slate) - Purge local synced and demo products
+          const staleLocal = currentLocal.filter((p) => isDemoStationeryProduct(p) || p.synced);
           if (staleLocal.length > 0) {
             await db.products.bulkDelete(staleLocal.map((p) => p.id)).catch(() => {});
           }
           const remaining = await db.products.toArray().catch(() => []);
-          set({ products: remaining, isLoading: false });
+          const realRemaining = remaining.filter((p) => !isDemoStationeryProduct(p));
+          if (realRemaining.length !== remaining.length) {
+            await db.products.clear().catch(() => {});
+          }
+          set({ products: realRemaining, isLoading: false });
           return;
         }
       }

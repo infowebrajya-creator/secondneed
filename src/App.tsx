@@ -9,11 +9,12 @@ import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { usePwaInstall } from './utils/usePwaInstall';
 import { useAuthStore } from './store/useAuthStore';
 import { useKeyboardShortcuts } from './utils/keyboard';
-import { useProductStore } from './store/useProductStore';
+import { useProductStore, isDemoStationeryProduct } from './store/useProductStore';
 import { useCustomerStore } from './store/useCustomerStore';
 import { useSalesStore } from './store/useSalesStore';
 import { useBillingStore } from './store/useBillingStore';
 import { useSettingsStore } from './store/useSettingsStore';
+import { db } from './lib/db';
 
 import { LoginPage } from './components/auth/LoginPage';
 
@@ -122,6 +123,21 @@ export function App() {
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
+    // Auto-purge any stale legacy demo stationery items across all devices on start
+    if (typeof window !== 'undefined' && !localStorage.getItem('webrajya_purged_demo_v2')) {
+      (async () => {
+        try {
+          const prods = await db.products.toArray().catch(() => []);
+          const demoIds = prods.filter(isDemoStationeryProduct).map((p) => p.id);
+          if (demoIds.length > 0) {
+            await db.products.bulkDelete(demoIds);
+          }
+          localStorage.setItem('webrajya_purged_demo_v2', 'true');
+          await loadProducts(true);
+        } catch (_) {}
+      })();
+    }
+
     // Initial data load on mount
     loadProducts();
     loadCustomers();
