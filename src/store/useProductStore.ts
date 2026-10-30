@@ -259,17 +259,53 @@ export const useProductStore = create<ProductState>((set, get) => ({
           set({ products: allMerged.filter((p) => !isDemoStationeryProduct(p)), isLoading: false });
           return;
         } else {
-          // Cloud catalog is empty (clean slate) - Purge local synced and demo products
-          const staleLocal = currentLocal.filter((p) => isDemoStationeryProduct(p) || p.synced);
+          // Cloud catalog is empty (clean slate) - Purge legacy demo stationery products
+          const staleLocal = currentLocal.filter((p) => isDemoStationeryProduct(p));
           if (staleLocal.length > 0) {
             await db.products.bulkDelete(staleLocal.map((p) => p.id)).catch(() => {});
           }
           const remaining = await db.products.toArray().catch(() => []);
           const realRemaining = remaining.filter((p) => !isDemoStationeryProduct(p));
-          if (realRemaining.length !== remaining.length) {
-            await db.products.clear().catch(() => {});
-          }
           set({ products: realRemaining, isLoading: false });
+
+          // Auto-heal: If local device has real unsynced products, push them to Supabase
+          const toPush = realRemaining.filter((p) => !p.synced);
+          if (toPush.length > 0) {
+            try {
+              const payloads = toPush.map((p) => ({
+                id: p.id,
+                sku: p.sku,
+                barcode: p.barcode || null,
+                name: p.name,
+                category: p.category || 'General Merchandise',
+                pack_info: p.packInfo || '1*1',
+                unit: p.unit || 'Pcs',
+                mrp: Number(p.mrp) || 0,
+                purchase_rate: Number(p.purchaseRate) || 0,
+                purchase_price: Number(p.purchaseRate) || 0,
+                sale_rate: Number(p.saleRate) || 0,
+                selling_rate: Number(p.saleRate) || 0,
+                hsn_code: p.hsnCode || '6205',
+                gst_rate: Number(p.gstRate) || 12,
+                tax_type: p.taxType || 'inclusive',
+                stock_qty: Number(p.stockQty) || 0,
+                stock_quantity: Number(p.stockQty) || 0,
+                min_stock_level: Number(p.minStockLevel) || 5,
+                low_stock_threshold: Number(p.minStockLevel) || 5,
+                is_active: p.isActive !== false,
+                created_at: p.createdAt || new Date().toISOString(),
+                updated_at: p.updatedAt || new Date().toISOString()
+              }));
+              const { error: pushErr } = await client.from('products').upsert(payloads, { onConflict: 'id' });
+              if (!pushErr) {
+                for (const p of toPush) {
+                  await db.products.update(p.id, { synced: true }).catch(() => {});
+                }
+              }
+            } catch (syncErr) {
+              console.warn('[loadProducts] Push error:', syncErr);
+            }
+          }
           return;
         }
       }
@@ -298,15 +334,58 @@ export const useProductStore = create<ProductState>((set, get) => ({
       synced: false
     };
 
+    // 1. Immediately store in local Dexie IndexedDB
     await db.products.put(newProduct);
-    // Optimistically update in-memory store immediately
+
+    // 2. Immediately update in-memory state so product appears with 0ms lag
     set((state) => ({
       products: [newProduct, ...state.products.filter(p => p.id !== newProduct.id)]
     }));
 
-    // Reconcile with Dexie IndexedDB cache
-    await get().loadProducts(true);
-    get().syncWithSupabase().catch(() => {});
+    // 3. Immediately Push to Supabase Cloud
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const payload = {
+          id: newProduct.id,
+          sku: newProduct.sku,
+          barcode: newProduct.barcode || null,
+          name: newProduct.name,
+          category: newProduct.category || 'General Merchandise',
+          pack_info: newProduct.packInfo || '1*1',
+          unit: newProduct.unit || 'Pcs',
+          mrp: Number(newProduct.mrp) || 0,
+          purchase_rate: Number(newProduct.purchaseRate) || 0,
+          purchase_price: Number(newProduct.purchaseRate) || 0,
+          sale_rate: Number(newProduct.saleRate) || 0,
+          selling_rate: Number(newProduct.saleRate) || 0,
+          hsn_code: newProduct.hsnCode || '6205',
+          gst_rate: Number(newProduct.gstRate) || 12,
+          tax_type: newProduct.taxType || 'inclusive',
+          stock_qty: Number(newProduct.stockQty) || 0,
+          stock_quantity: Number(newProduct.stockQty) || 0,
+          min_stock_level: Number(newProduct.minStockLevel) || 5,
+          low_stock_threshold: Number(newProduct.minStockLevel) || 5,
+          is_active: newProduct.isActive !== false,
+          created_at: now,
+          updated_at: now
+        };
+
+        const { error } = await client.from('products').upsert(payload, { onConflict: 'id' });
+        if (!error) {
+          await db.products.update(newProduct.id, { synced: true }).catch(() => {});
+          newProduct.synced = true;
+          set((state) => ({
+            products: state.products.map(p => p.id === newProduct.id ? { ...p, synced: true } : p)
+          }));
+        } else {
+          console.warn('[addProduct] Supabase insert warning:', error.message);
+        }
+      } catch (err) {
+        console.warn('[addProduct] Supabase connection error:', err);
+      }
+    }
+
     return newProduct;
   },
 
@@ -318,11 +397,12 @@ export const useProductStore = create<ProductState>((set, get) => ({
       ? (updates.barcode || '').trim().replace(/[\s\r\n\t>]+/g, '')
       : existing.barcode;
 
+    const now = new Date().toISOString();
     const updated: Product = {
       ...existing,
       ...updates,
       barcode: cleanBarcode,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
       synced: false
     };
 
@@ -330,8 +410,49 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set((state) => ({
       products: state.products.map(p => p.id === id ? updated : p)
     }));
-    await get().loadProducts(true);
-    get().syncWithSupabase().catch(() => {});
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const payload: Record<string, any> = {
+          updated_at: now
+        };
+        if (updates.name !== undefined) payload.name = updates.name;
+        if (updates.sku !== undefined) payload.sku = updates.sku;
+        if (updates.barcode !== undefined) payload.barcode = cleanBarcode || null;
+        if (updates.category !== undefined) payload.category = updates.category;
+        if (updates.packInfo !== undefined) payload.pack_info = updates.packInfo;
+        if (updates.unit !== undefined) payload.unit = updates.unit;
+        if (updates.mrp !== undefined) payload.mrp = Number(updates.mrp);
+        if (updates.purchaseRate !== undefined) {
+          payload.purchase_rate = Number(updates.purchaseRate);
+          payload.purchase_price = Number(updates.purchaseRate);
+        }
+        if (updates.saleRate !== undefined) {
+          payload.sale_rate = Number(updates.saleRate);
+          payload.selling_rate = Number(updates.saleRate);
+        }
+        if (updates.hsnCode !== undefined) payload.hsn_code = updates.hsnCode;
+        if (updates.gstRate !== undefined) payload.gst_rate = Number(updates.gstRate);
+        if (updates.taxType !== undefined) payload.tax_type = updates.taxType;
+        if (updates.stockQty !== undefined) {
+          payload.stock_qty = Number(updates.stockQty);
+          payload.stock_quantity = Number(updates.stockQty);
+        }
+        if (updates.minStockLevel !== undefined) {
+          payload.min_stock_level = Number(updates.minStockLevel);
+          payload.low_stock_threshold = Number(updates.minStockLevel);
+        }
+        if (updates.isActive !== undefined) payload.is_active = updates.isActive;
+
+        const { error } = await client.from('products').update(payload).eq('id', id);
+        if (!error) {
+          await db.products.update(id, { synced: true }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('[updateProduct] Supabase error:', err);
+      }
+    }
   },
 
   toggleProductActiveStatus: async (id) => {
@@ -348,7 +469,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set((state) => ({
       products: state.products.map(p => p.id === id ? { ...p, isActive: newStatus, updatedAt: now } : p)
     }));
-    get().syncWithSupabase().catch(() => {});
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('products').update({ is_active: newStatus, updated_at: now }).eq('id', id);
+      } catch (_) {}
+    }
   },
 
   deleteProduct: async (id) => {
@@ -356,7 +483,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set((state) => ({
       products: state.products.filter(p => p.id !== id)
     }));
-    get().syncWithSupabase().catch(() => {});
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from('products').delete().eq('id', id);
+      } catch (err) {
+        console.warn('[deleteProduct] Supabase error:', err);
+      }
+    }
   },
 
   adjustStock: async (productId, quantityChange, reason) => {
