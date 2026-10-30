@@ -102,7 +102,7 @@ export async function extractBillWithGemini(
   mimeType: string,
   apiKey: string
 ): Promise<ExtractedBill> {
-  const prompt = `You are a high-accuracy Indian purchase invoice and tax bill parser for wholesale stationery and retail stores.
+  const prompt = `You are a high-accuracy Indian purchase invoice and tax bill parser for retail stores, clothing & garment distributors, wholesale traders, and supermarkets.
 Inspect this invoice image (which may be a Marg ERP print, Tally print, GST tax invoice, or dot-matrix wholesale bill).
 Extract all information into a strict JSON object with this exact structure:
 
@@ -120,7 +120,7 @@ Extract all information into a strict JSON object with this exact structure:
       "rawName": "Exact item name / description printed on bill",
       "barcode": "Barcode / EAN if printed, or null",
       "sku": "Item code / SKU if printed, or null",
-      "hsnCode": "HSN code (e.g. 4820, 9608, 4802) or '4820'",
+      "hsnCode": "HSN code (e.g. 6205, 6203, 6109, 5208, 4820) or standard retail HSN",
       "quantity": 10,
       "freeQuantity": 0,
       "unit": "Pcs" (choose closest from: 'Pcs', 'Pkt', 'Box', 'Dozen', 'Ream', 'Set', 'Roll', 'Pad'),

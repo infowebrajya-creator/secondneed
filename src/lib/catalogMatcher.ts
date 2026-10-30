@@ -13,17 +13,41 @@ export interface MatchResult {
   };
 }
 
-// Common stationery & wholesale abbreviation expansions
+// Common retail, garment & wholesale abbreviation expansions
 const ABBREVIATIONS: Record<string, string> = {
+  // Garments & Retail
+  sht: 'shirt',
+  shrt: 'shirt',
+  ctn: 'cotton',
+  cotn: 'cotton',
+  slm: 'slim',
+  ft: 'fit',
+  trs: 'trousers',
+  pant: 'trousers',
+  pnt: 'trousers',
+  jns: 'jeans',
+  denm: 'denim',
+  tst: 'tshirt',
+  tshrt: 'tshirt',
+  tee: 'tshirt',
+  krt: 'kurta',
+  sz: 'size',
+  fml: 'formal',
+  csl: 'casual',
+  lyc: 'lycra',
+  poly: 'polyester',
+  wht: 'white',
+  blk: 'black',
+  blu: 'blue',
+  gry: 'grey',
+  grn: 'green',
+  mrp: 'mrp',
+  pcs: 'pcs',
+  // Common wholesale brands & stationery legacy
   clsmt: 'classmate',
   nb: 'notebook',
   bk: 'book',
   pgs: 'pgs',
-  p: 'pages',
-  blu: 'blue',
-  blk: 'black',
-  red: 'red',
-  grn: 'green',
   pkt: 'pack',
   pk: 'pack',
   copr: 'copier',
@@ -45,8 +69,7 @@ const ABBREVIATIONS: Record<string, string> = {
   cam: 'camlin',
   lux: 'luxor',
   pst: 'post-it',
-  wnd: 'wonder',
-  wbm: 'whiteboard marker'
+  wnd: 'wonder'
 };
 
 /**
