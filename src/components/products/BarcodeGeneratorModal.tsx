@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { 
   Printer, X, Tag, Search, Plus, Trash2, CheckCircle2, 
-  Settings2, Copy, Sliders, LayoutGrid, Check
+  Settings2, Copy, Sliders, LayoutGrid, Check, Sparkles
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Product, ShopProfile } from '../../types';
@@ -20,6 +20,7 @@ interface BarcodeGeneratorModalProps {
   onClose: () => void;
   products: Product[];
   initialProduct?: Product | null;
+  initialMode?: 'single' | 'all';
   shopProfile: ShopProfile;
   onToast: (type: 'success' | 'error' | 'info', title: string, desc?: string) => void;
 }
@@ -29,6 +30,7 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
   onClose,
   products,
   initialProduct,
+  initialMode,
   shopProfile,
   onToast
 }) => {
@@ -38,7 +40,11 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
     if (initialProduct) {
       return [{ product: initialProduct, count: 24 }];
     }
-    return products.slice(0, 1).map(p => ({ product: p, count: 24 }));
+    const active = products.filter(p => p.isActive !== false);
+    if (active.length > 0) {
+      return active.map(p => ({ product: p, count: 1 }));
+    }
+    return [];
   });
 
   // Display toggles
@@ -48,12 +54,22 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
   const [showSalePrice, setShowSalePrice] = useState(true);
   const [showCodeText, setShowCodeText] = useState(true);
 
-  // Sync if initialProduct changes when opening
+  // Sync if initialProduct or modal open state changes
   React.useEffect(() => {
-    if (isOpen && initialProduct) {
-      setStickerItems([{ product: initialProduct, count: 24 }]);
+    if (isOpen) {
+      if (initialProduct) {
+        setStickerItems([{ product: initialProduct, count: 24 }]);
+      } else {
+        const active = products.filter(p => p.isActive !== false);
+        if (active.length <= 24) {
+          setSelectedLayout('A4-24');
+        } else if (active.length <= 40) {
+          setSelectedLayout('A4-40');
+        }
+        setStickerItems(active.map(p => ({ product: p, count: 1 })));
+      }
     }
-  }, [isOpen, initialProduct]);
+  }, [isOpen, initialProduct, products]);
 
   // Product search picker results
   const searchResults = useMemo(() => {
@@ -105,9 +121,29 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
     return list;
   }, [stickerItems]);
 
-  // Print Barcode Stickers via dedicated print window
-  const handlePrint = () => {
-    if (flatStickers.length === 0) {
+  // Page estimate helper
+  const pageEstimate = useMemo(() => {
+    if (selectedLayout === 'Thermal-50x25') {
+      return `${totalStickerCount} Labels (Roll)`;
+    }
+    const perPage = selectedLayout === 'A4-40' ? 40 : 24;
+    const pages = Math.ceil(totalStickerCount / perPage);
+    if (pages <= 1) {
+      return `${totalStickerCount} Labels (1 Page Sheet)`;
+    }
+    return `${totalStickerCount} Labels (${pages} Pages)`;
+  }, [selectedLayout, totalStickerCount]);
+
+  // Print Barcode Stickers via dedicated print window (reusable helper)
+  const executePrint = (itemsToPrint: StickerItem[] = stickerItems, layoutToUse: StickerLayout = selectedLayout) => {
+    const list: Product[] = [];
+    itemsToPrint.forEach(item => {
+      for (let i = 0; i < item.count; i++) {
+        list.push(item.product);
+      }
+    });
+
+    if (list.length === 0) {
       onToast('info', 'No Stickers', 'Please add at least one product sticker to print.');
       return;
     }
@@ -122,7 +158,7 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
     let gridStyles = '';
     let stickerStyles = '';
 
-    if (selectedLayout === 'A4-24') {
+    if (layoutToUse === 'A4-24') {
       // 3 cols x 8 rows on A4 (70mm x 37mm per label)
       pageStyles = `@page { size: A4 portrait; margin: 4mm 5mm; }`;
       gridStyles = `
@@ -139,7 +175,7 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
         padding: 2.5mm 3mm;
         page-break-inside: avoid;
       `;
-    } else if (selectedLayout === 'A4-40') {
+    } else if (layoutToUse === 'A4-40') {
       // 4 cols x 10 rows on A4 (52.5mm x 29.7mm per label)
       pageStyles = `@page { size: A4 portrait; margin: 3mm 4mm; }`;
       gridStyles = `
@@ -169,7 +205,7 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
       `;
     }
 
-    const stickersHtml = flatStickers.map(prod => {
+    const stickersHtml = list.map(prod => {
       const barcodeValue = (prod.barcode && prod.barcode.trim()) || prod.sku;
       const encoded = encodeCode128(barcodeValue);
       const svgBars = encoded.bars.map(b => 
@@ -300,6 +336,48 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
     printWin.document.close();
   };
 
+  const handlePrint = () => {
+    executePrint(stickerItems, selectedLayout);
+  };
+
+  // 1-Click Load All Catalog Products (1 Label Each) with smart 1-page layout auto-selection
+  const handleLoadAllProducts = (autoPrint = false) => {
+    const activeProducts = products.filter(p => p.isActive !== false);
+    if (activeProducts.length === 0) {
+      onToast('info', 'No Products', 'Your product catalog has no active products.');
+      return;
+    }
+
+    let layoutToUse: StickerLayout = selectedLayout;
+    if (selectedLayout !== 'Thermal-50x25') {
+      if (activeProducts.length <= 24) {
+        layoutToUse = 'A4-24';
+        setSelectedLayout('A4-24');
+      } else if (activeProducts.length <= 40) {
+        layoutToUse = 'A4-40';
+        setSelectedLayout('A4-40');
+      }
+    }
+
+    const items: StickerItem[] = activeProducts.map(prod => ({
+      product: prod,
+      count: 1
+    }));
+
+    setStickerItems(items);
+    onToast(
+      'success',
+      'All Products Loaded',
+      `Queued 1 label each for ${activeProducts.length} product(s)${activeProducts.length <= (layoutToUse === 'A4-40' ? 40 : 24) ? ' (fits 1 page)' : ''}.`
+    );
+
+    if (autoPrint) {
+      setTimeout(() => {
+        executePrint(items, layoutToUse);
+      }, 150);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -346,7 +424,7 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono font-bold text-[#15803D] bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-              Total: {totalStickerCount} Labels
+              {pageEstimate}
             </span>
             <button
               type="button"
@@ -356,6 +434,49 @@ export const BarcodeGeneratorModal: React.FC<BarcodeGeneratorModalProps> = ({
             >
               <Printer className="w-4 h-4" /> Print Labels
             </button>
+          </div>
+        </div>
+
+        {/* Quick Presets Banner */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 p-2.5 bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 border border-blue-200/80 rounded-xl shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-black text-[#1E3A8A] flex items-center gap-1.5 shrink-0">
+              <Sparkles className="w-4 h-4 text-amber-500" /> 1-Click Options:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleLoadAllProducts(false)}
+              className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#1D4ED8] border border-blue-300 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+              title="Add 1 label for each product in your catalog into the sheet"
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-blue-600" />
+              <span>All Products (1 Label Each)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLoadAllProducts(true)}
+              className="px-3.5 py-1.5 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-lg text-xs font-black flex items-center gap-1.5 transition-all shadow-xs hover:shadow-md active:scale-95 cursor-pointer"
+              title="1-Click: Load 1 label per product and open print window immediately"
+            >
+              <Printer className="w-3.5 h-3.5 text-white" />
+              <span>1-Click Print All (1 Page Sheet)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {stickerItems.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStickerItems([]);
+                  onToast('info', 'Queue Cleared', 'Removed all items from sticker queue.');
+                }}
+                className="text-xs text-[#64748B] hover:text-red-600 font-bold flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-white/60 transition-colors cursor-pointer"
+                title="Clear all queued items"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Clear Queue
+              </button>
+            )}
           </div>
         </div>
 

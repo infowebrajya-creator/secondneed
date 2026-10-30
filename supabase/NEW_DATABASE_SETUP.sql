@@ -427,34 +427,7 @@ END $$;
 -- 14. SEED DEFAULT DATA
 -- ==============================================================================
 
--- Standard Retail / Stationery Product Categories
-INSERT INTO public.categories (name, description)
-VALUES
-  ('Pens', 'Ball pens, gel pens, fountain pens and refills'),
-  ('Pencils', 'Wooden pencils, mechanical pencils and leads'),
-  ('Erasers & Sharpeners', 'Erasers, sharpeners and correction tools'),
-  ('Notebooks & Registers', 'Notebooks, long books, registers and diaries'),
-  ('Paper & Sheets', 'A4 paper, colour paper, chart paper and sheets'),
-  ('Files & Folders', 'Files, folders, document holders and envelopes'),
-  ('Office Supplies', 'Staplers, pins, clips, tapes and office accessories'),
-  ('School Supplies', 'School stationery, geometry boxes and school kits'),
-  ('Art & Craft', 'Colours, brushes, craft paper and art materials'),
-  ('Markers & Highlighters', 'Permanent markers, whiteboard markers and highlighters'),
-  ('Drawing & Geometry', 'Rulers, scales, compasses, protractors and geometry sets'),
-  ('Adhesives', 'Glue sticks, liquid glue, Fevicol and adhesive products'),
-  ('Calculators', 'Basic and scientific calculators'),
-  ('Books & Publications', 'Books, workbooks, guides and educational publications'),
-  ('Bags & Accessories', 'School bags, pencil pouches and accessories'),
-  ('Files & Office Paper', 'Carbon paper, paper pads and office documentation'),
-  ('Printer & Computer Supplies', 'Printer paper, cartridges and computer accessories'),
-  ('Gift & Fancy Items', 'Gift wrap, greeting cards and decorative items'),
-  ('Toys & Games', 'Small toys, puzzles and stationery-related games'),
-  ('Bottles & Lunch Boxes', 'Water bottles, lunch boxes and food containers'),
-  ('General Merchandise', 'Products that do not fit another category'),
-  ('General Supplies', 'Standard day-to-day items')
-ON CONFLICT (name) DO NOTHING;
-
--- Default Cash Customer
+-- Default Cash Customer (Standard walk-in customer for quick counter sales)
 INSERT INTO public.customers (id, name, mobile, address, notes)
 VALUES
   ('cust_default_cash', 'Cash Customer', '', 'Local Walk-in Sale', 'Default walk-in customer')
